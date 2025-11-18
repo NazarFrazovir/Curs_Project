@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="uk"
+      data-theme="{{ (prefs.theme or 'dark') if prefs is defined else 'dark' }}"
+      data-density="{{ (prefs.density or 'normal') if prefs is defined else 'normal' }}">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Склад{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<header class="topbar">
+<a class="brand" data-tour="brand" href="{{ url_for('dashboard') }}">Оптовий склад</a>
+
+  <button class="nav-toggle" aria-label="Меню" aria-expanded="false" aria-controls="mainmenu">☰</button>
+
+  <nav id="mainmenu" class="mainmenu">
+    {% set ep = (request.endpoint or '') %}
+    {% if session.get('user') %}
+      {% set role = session.get('user', {}).get('role') %}
+
+      {% set dict_active   = ep.startswith('inv.suppliers_') or ep.startswith('inv.customers_') or ep.startswith('inv.products_') %}
+      {% set ops_active    = ep.startswith('inv.agreements_') or ep.startswith('inv.movements_') or ep == 'inv.balance_page' %}
+      {% set rep_active    = ep.startswith('reports.') or ep == 'inv.archive_history_page' %}
+      {% set tools_active  = (ep == 'reports.sql_console') %}
+      {% set admin_active  = ep.startswith('auth.users_') or ep.startswith('auth.requests_') %}
+
+      <div class="menu dropdown">
+        <button class="menu-toggle dropbtn {{ 'active' if dict_active else '' }}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="dict-menu">
+          Довідники ▾
+        </button>
+        <div id="dict-menu" class="submenu dropdown-menu" role="menu" hidden>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('inv.suppliers_') }}"  href="{{ url_for('inv.suppliers_list') }}">Постачальники</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('inv.customers_') }}"  href="{{ url_for('inv.customers_list') }}">Покупці</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('inv.products_') }}"   href="{{ url_for('inv.products_list') }}">Товари</a>
+        </div>
+      </div>
+
+      <div class="menu dropdown">
+        <button class="menu-toggle dropbtn {{ 'active' if ops_active else '' }}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="ops-menu">
+          Операції ▾
+        </button>
+        <div id="ops-menu" class="submenu dropdown-menu" role="menu" hidden>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('inv.agreements_') }}" href="{{ url_for('inv.agreements_list') }}">Угоди</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('inv.movements_') }}"  href="{{ url_for('inv.movements_list') }}">Рухи</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep == 'inv.balance_page' }}"         href="{{ url_for('inv.balance_page') }}">Залишки</a>
+        </div>
+      </div>
+
+      <div class="menu dropdown">
+        <button class="menu-toggle dropbtn {{ 'active' if rep_active else '' }}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="rep-menu">
+          Звіти ▾
+        </button>
+        <div id="rep-menu" class="submenu dropdown-menu" role="menu" hidden>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep == 'reports.index' }}"                 href="{{ url_for('reports.index') }}">Панель аналітики</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep == 'inv.archive_history_page' }}"      href="{{ url_for('inv.archive_history_page') }}">Історія архівацій</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep == 'reports.profitability' }}"         href="{{ url_for('reports.profitability') }}">Рентабельність</a>
+        </div>
+      </div>
+
+      {% if role in ['Admin','Operator'] %}
+      <div class="menu dropdown">
+        <button class="menu-toggle dropbtn {{ 'active' if tools_active else '' }}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="tools-menu">
+          Інструменти ▾
+        </button>
+        <div id="tools-menu" class="submenu dropdown-menu" role="menu" hidden>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep == 'reports.sql_console' }}" href="{{ url_for('reports.sql_console') }}">SQL (SELECT)</a>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if role == 'Admin' %}
+      <div class="menu dropdown">
+        <button class="menu-toggle dropbtn {{ 'active' if admin_active else '' }}" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="admin-menu">
+          Адмін {% if pending_requests|default(0) %}<span class="badge warn">{{ pending_requests }}</span>{% endif %} ▾
+        </button>
+        <div id="admin-menu" class="submenu dropdown-menu" role="menu" hidden>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('auth.users_') }}"    href="{{ url_for('auth.users_list') }}">Користувачі</a>
+          <a role="menuitem" tabindex="-1" class="{{ 'active' if ep.startswith('auth.requests_') }}" href="{{ url_for('auth.requests_list') }}">Заявки доступу</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="menu dropdown">
+        <button class="menu-toggle dropbtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="quick-menu">
+          + Додати ▾
+        </button>
+        <div id="quick-menu" class="submenu dropdown-menu" role="menu" hidden>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('inv.suppliers_list') }}#add">Постачальника</a>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('inv.customers_list') }}#add">Покупця</a>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('inv.products_list') }}#add">Товар</a>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('inv.movements_list') }}#add">Рух</a>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('inv.agreements_list') }}#add">Угоду</a>
+        </div>
+      </div>
+
+      <!-- USER MENU -->
+      <div class="menu usermenu">
+      <button type="button" class="icon-btn" id="kbd-help-open" title="Гарячі клавіші (F1)">?</button>
+        <button class="menu-toggle dropbtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu">
+          <span class="avatar">{{ session['user']['login'][:1] | upper }}</span>
+          <span class="user">{{ session['user']['login'] }}</span>
+          <span class="role-badge">{{ session['user']['role'] }}</span> ▾
+        </button>
+        <div id="user-menu" class="submenu dropdown-menu" role="menu" hidden style="min-width:260px;">
+          <div class="usercard">
+            <div class="avatar lg">{{ session['user']['login'][:1] | upper }}</div>
+            <div class="ucol">
+              <div><strong>{{ session['user']['login'] }}</strong> <span class="role-badge">{{ session['user']['role'] }}</span></div>
+              <div class="muted" style="font-size:12px;">Останній вхід: {{ session['user'].get('last_login') or '—' }}</div>
+            </div>
+          </div>
+          <hr>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('auth.settings_get') }}">Налаштування</a>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('dashboard') }}">Профіль (головна)</a>
+          <hr>
+          <a role="menuitem" tabindex="-1" href="{{ url_for('auth.logout') }}">Вийти</a>
+        </div>
+      </div>
+    {% else %}
+      <a href="{{ url_for('auth.login_get') }}">Вхід</a>
+      <a href="{{ url_for('auth.forgot') }}">Забули пароль?</a>
+    {% endif %}
+  </nav>
+</header>
+
+<main class="container">
+  {% for m in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ m[0] }}">{{ m[1] }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+
+<div id="cmdk" class="cmdk" hidden>
+  <div class="cmdk-box">
+    <input id="cmdk-input" type="text" placeholder="Пошук або перехід…" autocomplete="off">
+    <ul id="cmdk-list">
+      <li data-href="{{ url_for('inv.suppliers_list') }}">Постачальники</li>
+      <li data-href="{{ url_for('inv.customers_list') }}">Покупці</li>
+      <li data-href="{{ url_for('inv.products_list') }}">Товари</li>
+      <li data-href="{{ url_for('inv.agreements_list') }}">Угоди</li>
+      <li data-href="{{ url_for('inv.movements_list') }}">Рухи</li>
+      <li data-href="{{ url_for('inv.balance_page') }}">Залишки</li>
+      <li data-href="{{ url_for('reports.index') }}">Аналітика</li>
+      <li data-href="{{ url_for('inv.archive_history_page') }}">Історія архівацій</li>
+      {% if role in ['Admin','Operator'] %}<li data-href="{{ url_for('reports.sql_console') }}">SQL (SELECT)</li>{% endif %}
+      {% if role == 'Admin' %}<li data-href="{{ url_for('auth.users_list') }}">Користувачі</li><li data-href="{{ url_for('auth.requests_list') }}">Заявки доступу</li>{% endif %}
+    </ul>
+  </div>
+</div>
+
+<div id="kbd-help" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:9999;">
+  <section class="card" style="max-width:660px; margin:8vh auto; padding:16px;">
+    <h3 style="margin-bottom:6px;">Гарячі клавіші</h3>
+    <p class="muted" style="margin-top:-6px;">Працюють на всіх сторінках застосунку.</p>
+    <ul style="line-height:1.8; margin:10px 0 12px 0;">
+      <li><kbd>F1</kbd> — відкриття довідки</li>
+      <li><kbd>Enter</kbd> — підтвердити / надіслати форму</li>
+      <li><kbd>Esc</kbd> — назад/закрити</li>
+      <li><kbd>Ctrl/Cmd</kbd> + <kbd>K</kbd> — командна палітра</li>
+    </ul>
+    <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+  <button class="btn" id="tour-start">Почати міні-тур</button>
+  <button class="btn btn-ok" id="kbd-help-close">Закрити (Esc)</button>
+    </div>
+  </section>
+</div>
+
+<script>
+  window.APP_HOME = "{{ url_for('dashboard') if session.get('user') else url_for('auth.login_get') }}";
+</script>
+<script src="{{ url_for('static', filename='js/shortcuts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/anim.js') }}"></script>
+<script src="{{ url_for('static', filename='js/nav.js') }}"></script>
+<script src="{{ url_for('static', filename='js/table.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cmdk.js') }}"></script>
+
+<script src="{{ url_for('static', filename='js/onboard.js') }}"></script>
+<script>
+  // «?» відкриває довідку з гарячими клавішами
+  document.getElementById('kbd-help-open')?.addEventListener('click', () => {
+    const dlg = document.getElementById('kbd-help');
+    if (dlg) dlg.style.display = 'block';
+  });
+
+  // Кнопка в довідці запускає міні-тур
+  document.getElementById('tour-start')?.addEventListener('click', () => {
+    if (window.Tour && typeof window.Tour.start === 'function') {
+      window.Tour.start();
+    }
+  });
+</script>
+</body>
+</html>

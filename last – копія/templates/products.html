@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Товари{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Товари</h1>
+    <p class="sub">Асортимент, ціни та статус</p>
+  </header>
+
+  <!-- Пошук -->
+  <div class="section">
+    <form method="get" class="inline-form">
+      <label>Пошук
+        <input name="q" value="{{ q or '' }}" placeholder="назва / од. / постачальник">
+      </label>
+      <button class="btn btn-sm">Знайти</button>
+    </form>
+  </div>
+
+  <!-- Додати товар -->
+  <div class="section">
+    <form id="add" method="post" action="{{ url_for('inv.products_add') }}" class="inline-form">
+      <label>Постачальник
+        <select name="supplier_id" required>
+          {% for s in suppliers %}<option value="{{ s[0] }}">{{ s[1] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Назва <input name="name" required></label>
+      <label>Од. <input name="unit" required placeholder="шт/кг/м"></label>
+      <label>Ціна купівлі <input name="purchase_price" type="number" step="0.01" min="0" required></label>
+      <label>Ціна продажу <input name="sale_price" type="number" step="0.01" min="0" required></label>
+      <button type="submit" class="btn btn-sm btn-ok">Додати</button>
+    </form>
+  </div>
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Список товарів</caption>
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Назва</th>
+          <th class="center">Од.</th>
+          <th class="num">Ціна купівлі</th>
+          <th class="num">Ціна продажу</th>
+          <th>Постачальник</th>
+          <th class="center">Статус</th>
+          <th>Архівовано</th>
+          <th>Ким</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td class="center">{{ r[2] }}</td>
+          <td class="num">{{ '%.2f'|format(r[3] or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(r[4] or 0) }}</td>
+          <td>{{ r[5] }}</td>
+          <td class="center">
+            {% if r[7] %}
+              <span class="badge ok">активний</span>
+            {% else %}
+              <span class="badge warn">архів</span>
+            {% endif %}
+          </td>
+          <td>{{ r[8] or '—' }}</td>
+          <td>{{ r[9] or '—' }}</td>
+          <td class="actions">
+            {% if r[7] %}
+              <form method="post"
+                    action="{{ url_for('inv.products_archive', rid=r[0]) }}"
+                    onsubmit="return confirm('Архівувати товар?');">
+                <input type="hidden" name="reason" value="Архівовано через UI">
+                <button type="submit" class="btn btn-sm btn-warn">Архівувати</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="{{ url_for('inv.products_restore', rid=r[0]) }}"
+                    onsubmit="return confirm('Відновити товар?');">
+                <button type="submit" class="btn btn-sm btn-ok">Відновити</button>
+              </form>
+            {% endif %}
+            <a class="btn btn-sm" href="{{ url_for('inv.products_edit', rid=r[0]) }}">Редагувати</a>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not rows %}
+        <tr>
+          <td colspan="10" class="center" style="padding:14px;">
+            Немає товарів.
+            <a class="btn btn-sm btn-ok" href="#add"
+               onclick="const i=document.querySelector('#add input[name=name]'); if(i){i.focus();}">
+              Додати перший
+            </a>
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "_pager.html" %}
+</section>
+
+{% endblock %}

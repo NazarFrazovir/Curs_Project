@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Ціни на товар по постачальниках{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>2) Обсяг і ціни на товар по постачальниках (IN)</h2>
+  <form method="get" class="inline-form">
+    <label>Товар
+      <select name="product_id" required>
+        <option value="">— Оберіть товар —</option>
+        {% for p in products %}
+          <option value="{{ p[0] }}" {{ 'selected' if product_id==p[0] else '' }}>{{ p[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Показати</button>
+  </form>
+
+{% set qs = request.query_string.decode() if request.query_string else '' %}
+{% set role = session.get('user',{}).get('role') %}
+{% if role != 'Guest' and product_id %}
+  <p style="margin:6px 0;">
+    <a class="btn-link" href="{{ request.path }}?{{ qs }}{{ '&' if qs else '' }}format=csv">Експорт CSV</a>
+  </p>
+{% endif %}
+
+
+  <table class="grid">
+    <thead><tr><th>ID постач.</th><th>Постачальник</th><th>Прихід, к-сть</th><th>Сер. ціна</th><th>Мін.</th><th>Макс.</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r[0] }}</td><td>{{ r[1] }}</td>
+        <td class="num">{{ '%.2f'|format(r[2] or 0) }}</td>
+        <td class="num">{{ '%.2f'|format(r[3] or 0) }}</td>
+        <td class="num">{{ '%.2f'|format(r[4] or 0) }}</td>
+        <td class="num">{{ '%.2f'|format(r[5] or 0) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Забули пароль{% endblock %}
+{% block content %}
+<section class="card" style="max-width:820px;">
+  <h2>Забули пароль</h2>
+
+  <form method="post" action="{{ url_for('auth.forgot') }}" class="inline-form">
+    <label>Логін
+      <input name="login" value="{{ login_q or '' }}" required autofocus>
+    </label>
+    <button class="btn btn-ok">Показати</button>
+  </form>
+
+  {% if rows is not none %}
+  {% if rows %}
+    <div class="grid-wrap no-scroll" style="margin-top:12px;">
+      <table class="grid wrap">
+        <thead>
+          <tr><th>Логін</th><th>Пароль</th><th>Роль</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r[0] }}</td>
+              <td><code>{{ r[1] }}</code></td>
+              <td>{{ r[2] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="flash info" style="margin-top:10px;">За запитом «{{ login_q }}» нічого не знайдено.</div>
+  {% endif %}
+{% endif %}
+
+
+</section>
+{% endblock %}

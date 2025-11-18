@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Редагування руху{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Редагування руху #{{ r[0] }}</h2>
+  <p class="muted" style="margin-top:-6px;">Оновіть параметри руху. Для OUT потрібні покупець та (за потреби) угода.</p>
+
+  <form method="post"
+        action="{{ url_for('inv.movements_update', rid=r[0]) }}"
+        id="movement-edit-form"
+        class="inline-form"
+        style="display:block; max-width: 840px;">
+
+    <label>Тип операції
+      <select name="mtype" id="mtype" required>
+        <option value="IN" {{ 'selected' if r[2]=='IN' else '' }}>Прихід (від постачальника)</option>
+        <option value="OUT" {{ 'selected' if r[2]=='OUT' else '' }}>Витрата (покупцю)</option>
+      </select>
+    </label>
+
+    <label>Дата/час
+      <input name="movement_dt" type="datetime-local"
+             value="{{ r[1]|replace(' ', 'T')[:16] if r[1] else '' }}">
+    </label>
+
+    <label>Товар
+      <select name="product_id" required>
+        {% for p in products %}
+          <option value="{{ p[0] }}" {{ 'selected' if p[0]==r[3] else '' }}>{{ p[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label id="supplier_wrap" {% if r[2]=='OUT' %}style="display:none;"{% endif %}>
+      Постачальник
+      <select name="supplier_id" id="supplier_id" {% if r[2]=='OUT' %}disabled{% endif %}>
+        {% for s in suppliers %}
+          <option value="{{ s[0] }}" {{ 'selected' if s[0]==r[4] else '' }}>{{ s[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label id="customer_wrap" {% if r[2]=='IN' %}style="display:none;"{% endif %}>
+      Покупець
+      <select name="customer_id" id="customer_id" {% if r[2]=='IN' %}disabled{% endif %}>
+        {% for c in customers %}
+          <option value="{{ c[0] }}" {{ 'selected' if c[0]==r[5] else '' }}>{{ c[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label id="agreement_wrap" {% if r[2]=='IN' %}style="display:none;"{% endif %}>
+      Угода
+      <select name="agreement_id" id="agreement_id" {% if r[2]=='IN' %}disabled{% endif %}>
+        {% for a in agreements %}
+          <option value="{{ a[0] }}" {{ 'selected' if a[0]==r[6] else '' }}>{{ a[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>К-сть
+      <input name="qty" type="number" step="0.01" min="0" value="{{ r[7] }}" required>
+    </label>
+
+    <label>Ціна
+      <input name="price" type="number" step="0.01" min="0" value="{{ r[8] }}" required>
+    </label>
+
+    <div class="actions" style="margin-top:8px;">
+      <button type="submit" class="btn btn-ok">Зберегти</button>
+      <a class="btn btn-sm" href="{{ url_for('inv.movements_list') }}">Скасувати</a>
+    </div>
+  </form>
+</section>
+
+<script src="{{ url_for('static', filename='js/movements_edit.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Редагування постачальника{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Редагування постачальника #{{ r[0] }}</h2>
+  <p class="muted" style="margin-top:-4px;">Оновіть дані постачальника та збережіть зміни.</p>
+
+  <form method="post"
+        action="{{ url_for('inv.suppliers_update', rid=r[0]) }}"
+        class="inline-form"
+        style="display:block; max-width:720px;">
+    <label>Назва
+      <input name="name" value="{{ r[1]|default('') }}" required>
+    </label>
+    <label>Адреса
+      <input name="address" value="{{ r[2]|default('') }}">
+    </label>
+    <label>Телефон
+      <input name="phone" value="{{ r[3]|default('') }}">
+    </label>
+
+    <div class="actions" style="margin-top:8px;">
+      <button type="submit" class="btn btn-ok">Зберегти</button>
+      <a class="btn btn-sm" href="{{ url_for('inv.suppliers_list') }}">Скасувати</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

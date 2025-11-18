@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Паролі{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Паролі користувача(ів)</h2>
+  <table class="grid">
+    <thead><tr><th>Логін</th><th>Пароль</th><th>Роль</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td>{{ r[0] }}</td><td>{{ r[1] }}</td><td>{{ r[2] }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

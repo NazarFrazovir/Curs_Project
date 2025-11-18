@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Рухи товарів{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Рухи товарів</h1>
+    <p class="sub">Журнал приходів (IN) та витрат (OUT). Для OUT оберіть покупця та (за потреби) угоду.</p>
+  </header>
+
+  <!-- Пошук -->
+  <div class="section">
+    <form method="get" class="inline-form">
+      <label>Пошук
+        <input name="q" value="{{ q or '' }}" placeholder="ID / товар / постачальник / покупець">
+      </label>
+      <button class="btn btn-sm">Знайти</button>
+    </form>
+  </div>
+
+  <!-- Додати рух -->
+  <div class="section">
+    <form id="movement-form" method="post" action="{{ url_for('inv.movements_add') }}" class="inline-form" style="max-width:1000px;">
+      <label>Тип
+        <select name="mtype" id="mtype" required>
+          <option value="IN">Прихід (постач.)</option>
+          <option value="OUT">Витрата (покупцю)</option>
+        </select>
+      </label>
+
+      <label>Дата/час
+        <input name="movement_dt" type="datetime-local">
+      </label>
+
+      <label>Товар
+        <select name="product_id" required>
+          {% for p in products %}<option value="{{ p[0] }}">{{ p[1] }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label id="supplier_wrap">Постачальник
+        <select name="supplier_id" id="supplier_id">
+          {% for s in suppliers %}<option value="{{ s[0] }}">{{ s[1] }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label id="customer_wrap" style="display:none;">Покупець
+        <select name="customer_id" id="customer_id" disabled>
+          {% for c in customers %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label id="agreement_wrap" style="display:none;">Угода
+        <select name="agreement_id" id="agreement_id" disabled>
+          {% for a in agreements %}<option value="{{ a[0] }}">{{ a[1] }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label>К-сть
+        <input name="qty" type="number" step="0.01" min="0" required>
+      </label>
+
+      <label>Ціна
+        <input name="price" type="number" step="0.01" min="0" required>
+      </label>
+
+      <button type="submit" class="btn btn-sm btn-ok">Додати</button>
+    </form>
+  </div>
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Журнал рухів</caption>
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Дата/час</th>
+          <th>Тип</th>
+          <th>Товар</th>
+          <th>Постачальник</th>
+          <th>Покупець</th>
+          <th>Угода</th>
+          <th class="num">К-сть</th>
+          <th class="num">Ціна</th>
+          <th class="num">Сума</th>
+          <th>Статус</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {# 0 id,1 dt,2 type,3 product,4 product_id,5 supplier,6 customer,7 qty,8 price,9 sum,10 agr_no,11 is_canceled,12 canceled_at,13 canceled_by #}
+        <tr class="{{ 'archived' if r[11] else '' }}">
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td class="center">
+            {% if r[2] == 'IN' %}
+              <span class="badge ok" title="Прихід">IN</span>
+            {% else %}
+              <span class="badge warn" title="Витрата">OUT</span>
+            {% endif %}
+          </td>
+          <td>{{ r[3] }}</td>
+          <td>{{ r[5] or '—' }}</td>
+          <td>{{ r[6] or '—' }}</td>
+          <td>{{ r[10] or '—' }}</td>
+          <td class="num">{% if r[2]=='IN' %}+{% else %}-{% endif %}{{ '%.2f'|format(r[7] or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(r[8] or 0) }}</td>
+          <td class="num">
+            {% set s = r[9] if r[9] is not none else ((r[7] or 0) * (r[8] or 0)) %}
+            {% if r[2]=='IN' %}+{% else %}-{% endif %}{{ '%.2f'|format(s or 0) }}
+          </td>
+          <td>
+            {% if r[11] %}
+              <span class="badge" title="Скасовано {{ r[12] }} {{ ('користувачем ' ~ r[13]) if r[13] else '' }}">Скасовано</span>
+            {% else %}
+              <span class="badge ok">Активний</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            {% if not r[11] %}
+              <form method="post" action="{{ url_for('inv.movements_cancel', rid=r[0]) }}" onsubmit="return confirm('Скасувати рух?');">
+                <input type="hidden" name="reason" value="Скасовано через UI">
+                <button class="btn btn-sm btn-warn">Скасувати</button>
+              </form>
+              <a class="btn btn-sm" href="{{ url_for('inv.movements_edit', rid=r[0]) }}">Редагувати</a>
+            {% else %}
+              <form method="post" action="{{ url_for('inv.movements_uncancel', rid=r[0]) }}" onsubmit="return confirm('Відновити рух?');">
+                <button class="btn btn-sm btn-ok">Відновити</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not rows %}
+        <tr>
+          <td colspan="12" class="center" style="padding:14px;">
+            Немає рухів. Додайте перший через форму вище.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "_pager.html" %}
+</section>
+
+<script src="{{ url_for('static', filename='js/movements.js') }}"></script>
+{% endblock %}

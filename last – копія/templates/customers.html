@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Покупці{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Покупці</h1>
+    <p class="sub">Список клієнтів та їхній статус</p>
+  </header>
+
+  <!-- Пошук -->
+  <div class="section">
+    <form method="get" class="inline-form">
+      <label>Пошук
+        <input name="q" value="{{ q or '' }}" placeholder="назва/адреса/телефон">
+      </label>
+      <button class="btn btn-sm">Знайти</button>
+    </form>
+  </div>
+
+  <!-- Додати покупця -->
+  <div class="section">
+    <form id="add" method="post" action="{{ url_for('inv.customers_add') }}" class="inline-form">
+      <label>Назва <input name="name" required></label>
+      <label>Адреса <input name="address"></label>
+      <label>Телефон <input name="phone"></label>
+      <button type="submit" class="btn btn-sm btn-ok">Додати</button>
+    </form>
+  </div>
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Клієнти (активні та архівні)</caption>
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Назва</th>
+          <th>Адреса</th>
+          <th>Телефон</th>
+          <th class="center">Статус</th>
+          <th>Архівовано</th>
+          <th>Ким</th>
+          <th class="num">Покупок</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td>{{ r[2] or '' }}</td>
+          <td>{{ r[3] or '' }}</td>
+          <td class="center">
+            {% if not r[4] %}
+              <span class="badge ok">активний</span>
+            {% else %}
+              <span class="badge warn">архів</span>
+            {% endif %}
+          </td>
+          <td>{{ r[4] or '—' }}</td>
+          <td>{{ r[5] or '—' }}</td>
+          <td class="num">{{ r[6] or 0 }}</td>
+          <td class="actions">
+            {% if not r[4] %}
+              <form method="post"
+                    action="{{ url_for('inv.customers_archive', rid=r[0]) }}"
+                    onsubmit="return confirm('Архівувати покупця?');">
+                <input type="hidden" name="reason" value="Архівовано через UI">
+                <button class="btn btn-sm btn-warn">Архівувати</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="{{ url_for('inv.customers_restore', rid=r[0]) }}"
+                    onsubmit="return confirm('Відновити покупця?');">
+                <button class="btn btn-sm btn-ok">Відновити</button>
+              </form>
+            {% endif %}
+            <a class="btn btn-sm" href="{{ url_for('inv.customers_edit', rid=r[0]) }}">Редагувати</a>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if not rows %}
+        <tr>
+          <td colspan="9" class="center" style="padding:14px;">
+            Немає покупців.
+            <a class="btn btn-sm btn-ok" href="#add"
+               onclick="const i=document.querySelector('#add input[name=name]'); if(i){i.focus();}">
+              Додати першого
+            </a>
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "_pager.html" %}
+</section>
+
+{% endblock %}

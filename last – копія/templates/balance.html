@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Залишки{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Залишки товарів</h1>
+    <p class="sub">Підсумок приходу/витрати та актуальний залишок по кожному товару.</p>
+  </header>
+
+  <!-- Фільтри -->
+  <div class="section">
+    <form method="get"
+          action="{{ url_for('inv.balance_page') }}"
+          class="inline-form"
+          style="display:block; max-width:1100px;">
+      <label>Пошук (товар)
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="Назва товару">
+      </label>
+
+      <label>Постачальник
+        <select name="supplier_id">
+          <option value="">— Усі —</option>
+          {% for s in suppliers %}
+            <option value="{{ s[0] }}" {{ 'selected' if (supplier_id|int == s[0]) else '' }}>{{ s[1] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label style="align-self:center; gap:6px; display:flex;">
+          Показувати нульові
+        <input type="checkbox" name="show_zero" {{ 'checked' if show_zero else '' }}>
+      </label>
+
+      <button type="submit" class="btn btn-sm btn-ok">Фільтрувати</button>
+      <a class="btn btn-sm"
+         href="{{ url_for('inv.balance_csv', q=q, supplier_id=supplier_id, show_zero='on' if show_zero else '') }}">
+        Експорт CSV
+      </a>
+    </form>
+  </div>
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Актуальні залишки</caption>
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Товар</th>
+          <th class="center">Од.</th>
+          <th>Постачальник</th>
+          <th class="num">Прихід</th>
+          <th class="num">Витрата</th>
+          <th class="num">Залишок</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {# 0 id,1 product,2 unit,3 supplier_id,4 supplier,5 in_qty,6 out_qty,7 balance #}
+        <tr class="{{ 'low' if r[7] <= 5 else '' }}">
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td class="center">{{ r[2] }}</td>
+          <td>{{ r[4] }}</td>
+          <td class="num">{{ '%.2f'|format(r[5] or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(r[6] or 0) }}</td>
+          <td class="num"><strong>{{ '%.2f'|format(r[7] or 0) }}</strong></td>
+        </tr>
+        {% endfor %}
+
+        {% if not rows %}
+        <tr>
+          <td colspan="7" class="center" style="padding:14px;">
+            Нічого не знайдено за заданими фільтрами.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}

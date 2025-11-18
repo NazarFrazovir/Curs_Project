@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Заявки доступу{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Заявки доступу</h2>
+  <div class="grid-wrap">
+    <table class="grid">
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Логін</th>
+          <th>Поточна роль</th>
+          <th>Бажана роль</th>
+          <th>Повідомлення</th>
+          <th>Статус</th>
+          <th>Запитано</th>
+          <th>Оброблено</th>
+          <th>Ким</th>
+          <th>Коментар адміна</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td>{{ r[2] }}</td>
+          <td>{{ r[3] }}</td>
+          <td>{{ r[4] or '' }}</td>
+          <td>{{ r[5] }}</td>
+          <td>{{ r[6] }}</td>
+          <td>{{ r[7] or '' }}</td>
+          <td>{{ r[8] or '' }}</td>
+          <td>{{ r[9] or '' }}</td>
+          <td class="actions">
+            {% if r[5]=='pending' %}
+            <form method="post" action="{{ url_for('auth.requests_approve', rid=r[0]) }}" onsubmit="return confirm('Схвалити? Роль стане Authorized.');">
+              <button class="btn btn-sm btn-ok">Схвалити</button>
+            </form>
+            <form method="post" action="{{ url_for('auth.requests_deny', rid=r[0]) }}" onsubmit="return confirm('Відхилити заявку?');">
+              <input type="text" name="admin_comment" placeholder="Коментар">
+              <button class="btn btn-sm btn-warn">Відхилити</button>
+            </form>
+            {% else %}
+              <span class="badge">{{ r[5] }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

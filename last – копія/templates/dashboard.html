@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Головна · Склад{% endblock %}
+{% block content %}
+
+<section class="card" data-tour="home-hero"  style="margin-bottom:14px; ">
+  <h2 style="margin-bottom:8px;">Ласкаво просимо!</h2>
+  <p class="muted" style="margin-top:-4px;">Використовуйте навігацію зверху або швидкі дії нижче.</p>
+</section>
+
+<!-- Стат-карточки -->
+<section class="cards-grid">
+  <div class="card stat cust">
+  <div class="label">Постачальники (активні)</div>
+  <div class="value">{{ stats.suppliers }}</div>
+  <a class="btn btn-sm w-full" href="{{ url_for('inv.suppliers_list') }}">Перейти</a>
+</div>
+
+<div class="card stat">
+  <div class="label">Покупці (активні)</div>
+  <div class="value">{{ stats.customers }}</div>
+  <a class="btn btn-sm w-full" href="{{ url_for('inv.customers_list') }}">Перейти</a>
+</div>
+
+<div class="card stat">
+  <div class="label">Товари (активні)</div>
+  <div class="value">{{ stats.products }}</div>
+  <a class="btn btn-sm w-full" href="{{ url_for('inv.products_list') }}">Перейти</a>
+</div>
+
+<div class="card stat">
+  <div class="label">Рухів всього</div>
+  <div class="value">{{ stats.moves }}</div>
+  <a class="btn btn-sm w-full" href="{{ url_for('inv.movements_list') }}">Детальніше</a>
+</div>
+
+  {% if stats.stock_value is defined %}
+  <div class="card stat">
+    <div class="label">Оціночна вартість складу</div>
+    <div class="value">{{ '{:,.2f}'.format(stats.stock_value) }} <span class="muted" style="font-size:14px;">грн</span></div>
+    <a class="btn btn-sm" href="{{ url_for('inv.balance_page') }}">Залишки</a>
+  </div>
+  {% endif %}
+</section>
+
+<!-- Дві колонки з актуальним -->
+<section class="cards-grid">
+  <div class="card">
+    <h3 style="margin:0 0 8px;">Останні рухи</h3>
+    {% if recent_moves %}
+      <div class="grid-wrap">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Час</th>
+              <th>Тип</th>
+              <th>Товар</th>
+              <th class="num">К-ть</th>
+              <th class="num">Ціна</th>
+              <th class="num">Сума</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for m in recent_moves %}
+            <tr class="{{ 'muted' if m.is_canceled }}">
+              <td>{{ m.dt }}</td>
+              <td>{{ 'Прихід' if m.mtype=='IN' else 'Витрата' }}</td>
+              <td>{{ m.product_name }}</td>
+              <td class="num">{{ m.qty }}</td>
+              <td class="num">{{ m.price }}</td>
+              <td class="num">{{ m.sum_total }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:8px;">
+        <a class="btn btn-sm" href="{{ url_for('inv.movements_list') }}">Всі рухи</a>
+      </div>
+    {% else %}
+      <p class="muted">Поки що немає рухів.</p>
+      <a class="btn btn-ok btn-sm" href="{{ url_for('inv.movements_list') }}#add">+ Додати рух</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px;">Низькі залишки</h3>
+    {% if low_stock %}
+      <div class="grid-wrap">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Од.</th>
+              <th class="num">Залишок</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for s in low_stock %}
+            <tr class="{{ 'low' if s.balance_qty <= 0 }}">
+              <td>{{ s.product }}</td>
+              <td>{{ s.unit }}</td>
+              <td class="num">{{ s.balance_qty }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:8px;">
+        <a class="btn btn-sm" href="{{ url_for('inv.balance_page') }}">Перейти до залишків</a>
+      </div>
+    {% else %}
+      <p class="muted">Критичних залишків не виявлено.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px;">Останні архівації</h3>
+    {% if recent_archives %}
+      <ul class="list">
+        {% for a in recent_archives %}
+          <li>
+            <span class="muted">{{ a.performed_at }}</span> —
+            {{ a.entity_type }} #{{ a.entity_id }}:
+            <span class="badge {{ 'ok' if a.action=='restore' else 'warn' }}">{{ 'Відновлено' if a.action=='restore' else 'Архівовано' }}</span>
+            <span class="muted"> · {{ a.performed_by }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="actions" style="margin-top:8px;">
+        <a class="btn btn-sm" href="{{ url_for('inv.archive_history_page') }}">Вся історія</a>
+      </div>
+    {% else %}
+      <p class="muted">Поки що історія архівацій порожня.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px;">Швидкі дії</h3>
+    <div class="actions" style="flex-wrap:wrap;">
+      <a class="btn btn-ok btn-sm" href="{{ url_for('inv.suppliers_list') }}#add">+ Постачальник</a>
+      <a class="btn btn-ok btn-sm" href="{{ url_for('inv.customers_list') }}#add">+ Покупець</a>
+      <a class="btn btn-ok btn-sm" href="{{ url_for('inv.products_list') }}#add">+ Товар</a>
+      <a class="btn btn-ok btn-sm" href="{{ url_for('inv.movements_list') }}#add">+ Рух</a>
+      <a class="btn btn-sm" href="{{ url_for('reports.index') }}">Відкрити аналітику</a>
+      <a class="btn btn-sm" href="{{ url_for('reports.sql_console') }}">SQL (SELECT)</a>
+    </div>
+    <p class="muted" style="margin-top:10px;">Підказка: натисніть <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>K</kbd> для швидкого переходу.</p>
+  </div>
+</section>
+
+{% endblock %}

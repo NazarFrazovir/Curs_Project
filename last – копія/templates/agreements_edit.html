@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Редагування угоди{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Редагування угоди #{{ row[0] }}</h2>
+  <p class="muted" style="margin-top:-4px;">Оновіть параметри угоди та збережіть зміни.</p>
+
+  <form method="post"
+        action="{{ url_for('inv.agreements_update', rid=row[0]) }}"
+        class="inline-form"
+        style="display:block; max-width:720px;">
+    <label>Покупець
+      <select name="customer_id" required>
+        {% for c in customers %}
+          <option value="{{ c[0] }}" {% if c[0]==row[4] %}selected{% endif %}>{{ c[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>№ угоди
+      <input name="agreement_no" value="{{ row[1]|default('') }}" required>
+    </label>
+
+    <label>Дата
+      <input name="agreement_dt" type="date" value="{{ row[2]|slice(0,10) }}" required>
+    </label>
+
+    <div class="actions" style="margin-top:8px;">
+      <button class="btn btn-ok" type="submit">Зберегти</button>
+      <a class="btn btn-sm" href="{{ url_for('inv.agreements_list') }}">Скасувати</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

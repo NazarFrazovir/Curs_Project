@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Користувачі{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Користувачі</h2>
+  <p class="muted" style="margin-top:-6px;">Керування обліковими записами (логін, пароль, роль).</p>
+
+<form method="get" class="inline-form" style="margin-bottom:8px;">
+    <label>Пошук <input name="q" value="{{ q or '' }}" placeholder="Логін/Роль"></label>
+    <button class="btn btn-sm">Знайти</button>
+  </form>
+
+  <!-- Додати користувача -->
+  <form method="post" action="{{ url_for('auth.users_add') }}" class="inline-form" style="display:block; max-width: 900px;">
+    <label>Логін
+      <input name="login" required>
+    </label>
+    <label>Пароль
+      <input name="password" required>
+    </label>
+    <label>Роль
+      <select name="role" required>
+        <option value="Admin">Admin</option>
+        <option value="Operator">Operator</option>
+        <option value="Authorized">Authorized</option>
+        <option value="Guest">Guest</option>
+      </select>
+    </label>
+    <button type="submit" class="btn btn-sm btn-ok">Додати</button>
+  </form>
+
+  <div class="grid-wrap table-dense" style="margin-top:8px;">
+    <table class="grid">
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Логін</th>
+          <th>Пароль</th>
+          <th>Роль</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {# r: [id, login, password, role] #}
+        <tr>
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td class="muted">{{ r[2] }}</td>
+          <td>
+            {% if r[3] == 'Admin' %}
+              <span class="badge ok">Admin</span>
+            {% elif r[3] == 'Operator' %}
+              <span class="badge">Operator</span>
+            {% elif r[3] == 'Authorized' %}
+              <span class="badge">Authorized</span>
+            {% else %}
+              <span class="badge muted">Guest</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            <a class="btn btn-sm" href="{{ url_for('auth.users_edit', rid=r[0]) }}">Редагувати</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+    {% include "_pager.html" %}
+{% endblock %}

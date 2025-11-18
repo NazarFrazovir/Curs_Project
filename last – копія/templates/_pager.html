@@ -1,0 +1,17 @@
+{% if pages and pages > 1 %}
+<nav class="pager">
+  <a class="{{ 'disabled' if page<=1 else '' }}"
+     href="{{ request.path }}?page=1&per_page={{ per_page }}{{ qs_base }}">«</a>
+
+  <a class="{{ 'disabled' if page<=1 else '' }}"
+     href="{{ request.path }}?page={{ page-1 if page>1 else 1 }}&per_page={{ per_page }}{{ qs_base }}">‹</a>
+
+  <span class="muted">Стор. {{ page }} з {{ pages }}</span>
+
+  <a class="{{ 'disabled' if page>=pages else '' }}"
+     href="{{ request.path }}?page={{ page+1 if page<pages else pages }}&per_page={{ per_page }}{{ qs_base }}">›</a>
+
+  <a class="{{ 'disabled' if page>=pages else '' }}"
+     href="{{ request.path }}?page={{ pages }}&per_page={{ per_page }}{{ qs_base }}">»</a>
+</nav>
+{% endif %}

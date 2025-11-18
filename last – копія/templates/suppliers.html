@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Постачальники{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Постачальники</h1>
+    <p class="sub">Список партнерів-постачальників та їхній статус</p>
+  </header>
+
+  <!-- Пошук -->
+  <div class="section">
+    <form method="get" class="inline-form">
+      <label>Пошук
+        <input name="q" value="{{ q or '' }}" placeholder="назва/адреса/телефон">
+      </label>
+      <button class="btn btn-sm">Знайти</button>
+    </form>
+  </div>
+
+  <!-- Додати постачальника -->
+  <div class="section">
+    <form id="add" method="post" action="{{ url_for('inv.suppliers_add') }}" class="inline-form">
+      <label>Назва <input name="name" required></label>
+      <label>Адреса <input name="address"></label>
+      <label>Телефон <input name="phone"></label>
+      <button type="submit" class="btn btn-sm btn-ok">Додати</button>
+    </form>
+  </div>
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Активні та архівні постачальники</caption>
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>Назва</th>
+          <th>Адреса</th>
+          <th>Телефон</th>
+          <th class="center">Активний</th>
+          <th>Архівовано</th>
+          <th>Ким</th>
+          <th class="num">Товарів</th>
+          <th class="num">Приходів</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td>{{ r[2] or '' }}</td>
+          <td>{{ r[3] or '' }}</td>
+          <td class="center">
+            {% if r[4] %}
+              <span class="badge ok">так</span>
+            {% else %}
+              <span class="badge muted">ні</span>
+            {% endif %}
+          </td>
+          <td>{{ r[5] or '—' }}</td>
+          <td>{{ r[6] or '—' }}</td>
+          <td class="num">{{ r[7] }}</td>
+          <td class="num">{{ r[8] }}</td>
+          <td class="actions">
+            {% if r[4] %}
+              <form method="post"
+                    action="{{ url_for('inv.suppliers_archive', rid=r[0]) }}"
+                    onsubmit="return confirm('Архівувати постачальника?');">
+                <input type="hidden" name="reason" value="Архівовано через UI">
+                <button type="submit" class="btn btn-sm btn-warn">Архівувати</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="{{ url_for('inv.suppliers_restore', rid=r[0]) }}"
+                    onsubmit="return confirm('Відновити постачальника?');">
+                <button type="submit" class="btn btn-sm btn-ok">Відновити</button>
+              </form>
+            {% endif %}
+            <a class="btn btn-sm" href="{{ url_for('inv.suppliers_edit', rid=r[0]) }}">Редагувати</a>
+          </td>
+        </tr>
+      {% endfor %}
+
+      {% if not rows %}
+        <tr>
+          <td colspan="10" class="center" style="padding:14px;">
+            Немає постачальників.
+            <a class="btn btn-sm btn-ok" href="#add"
+               onclick="const i=document.querySelector('#add input[name=name]'); if(i){i.focus();}">
+              Додати першого
+            </a>
+          </td>
+        </tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "_pager.html" %}
+</section>
+
+{% endblock %}

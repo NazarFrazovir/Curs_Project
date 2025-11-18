@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Редагування товару{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Редагування товару #{{ row[0] }}</h2>
+  <p class="muted" style="margin-top:-4px;">Змініть параметри та збережіть зміни.</p>
+
+  <form method="post"
+        action="{{ url_for('inv.products_update', rid=row[0]) }}"
+        class="inline-form"
+        style="display:block; max-width: 720px;">
+
+    <label>Постачальник
+      <select name="supplier_id" required>
+        {% for s in suppliers %}
+          <option value="{{ s[0] }}" {% if s[0]==row[6] %}selected{% endif %}>{{ s[1] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Назва
+      <input name="name" value="{{ row[1]|default('') }}" required>
+    </label>
+
+    <label>Од.
+      <input name="unit" value="{{ row[2]|default('') }}" placeholder="шт/кг/м">
+    </label>
+
+    <label>Ціна купівлі
+      <input name="purchase_price" type="number" step="0.01" min="0" value="{{ row[3] if row[3] is not none else '' }}" required>
+    </label>
+
+    <label>Ціна продажу
+      <input name="sale_price" type="number" step="0.01" min="0" value="{{ row[4] if row[4] is not none else '' }}" required>
+    </label>
+
+    <div class="actions" style="margin-top:8px;">
+      <button class="btn btn-ok" type="submit">Зберегти</button>
+      <a class="btn btn-sm" href="{{ url_for('inv.products_list') }}">Скасувати</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

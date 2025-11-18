@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}SQL (лише SELECT){% endblock %}
+{% block content %}
+<section class="card">
+  <h2>SQL консоль (лише SELECT)</h2>
+  <form method="get" class="inline-form" style="display:block;">
+    <label style="display:block;width:100%;">SQL
+      <textarea name="sql" rows="7" style="width:100%;font-family:ui-monospace,Consolas,monospace;">{{ sql_text }}</textarea>
+    </label>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <label>Колонка дати <input name="date_col" value="{{ date_col or '' }}" placeholder="movement_dt"></label>
+      <label>З <input type="date" name="d1" value="{{ d1 or '' }}"></label>
+      <label>По <input type="date" name="d2" value="{{ d2 or '' }}"></label>
+      <label>Ліміт <input type="number" name="limit" min="1" max="1000" value="{{ limit or 200 }}"></label>
+      <input type="hidden" name="run" value="1">
+      <button class="btn btn-sm">Виконати</button>
+      {% if headers and rows %}
+        {% set qs = request.query_string.decode() if request.query_string else '' %}
+        <a class="btn btn-sm" href="{{ request.path }}?{{ qs }}{{ '&' if qs else '' }}format=csv">Експорт CSV</a>
+      {% endif %}
+    </div>
+  </form>
+  {% if error %}<div class="flash error" style="margin-top:10px;">{{ error }}</div>{% endif %}
+  {% if headers %}
+  <hr>
+  <div class="grid-wrap"><table class="grid">
+    <thead><tr>{% for h in headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>{% for c in r %}<td>{{ c }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  <p class="muted">Рядків: {{ rows|length }}</p>
+  {% endif %}
+</section>
+{% endblock %}

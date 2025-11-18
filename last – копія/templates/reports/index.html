@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Аналітика{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Аналітичні звіти</h2>
+  <ul>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.top_customers') }}">1) Найактивніші покупці</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.product_prices') }}">2) Ціни на товар по постачальниках</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.customers_of_product') }}">3) Покупці зазначеного товару</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.supplies_by_supplier') }}">4) Поставки товару постачальником</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.by_agreement') }}">5) Рухи за номером угоди</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.sales_of_product') }}">6) Продажі товару за період</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.profitability') }}">7) Рентабельність складу</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.supplier_nomenclature') }}">8) Номенклатура постачальника</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.customers_threshold') }}">9) Покупці товару (поріг)</a></li>
+    <li><a class="btn btn-sm" href="{{ url_for('reports.suppliers_threshold') }}">10) Постачальники товару (поріг)</a></li>
+  </ul>
+</section>
+{% endblock %}

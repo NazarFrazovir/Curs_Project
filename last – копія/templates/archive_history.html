@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Історія архівацій{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Історія архівацій</h1>
+    <p class="sub">Події архівування, відновлення та скасування по всіх сутностях системи.</p>
+  </header>
+
+  <!-- Пошук -->
+  <div class="section">
+    <form method="get" class="inline-form">
+      <label>Пошук
+        <input name="q" value="{{ q or '' }}" placeholder="сутність / дія / користувач / причина">
+      </label>
+      <button class="btn btn-sm">Знайти</button>
+    </form>
+  </div>
+
+  {% set et_labels = {
+    'supplier':'Постачальник',
+    'customer':'Покупець',
+    'product':'Товар',
+    'agreement':'Угода',
+    'movement':'Рух'
+  } %}
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Журнал архіваційних дій</caption>
+      <thead>
+        <tr>
+          <th>Коли</th>
+          <th>Сутність</th>
+          <th class="center">ID</th>
+          <th>Дія</th>
+          <th>Користувач</th>
+          <th>Причина</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {# r[0]=created_at, r[1]=entity_type, r[2]=entity_id, r[3]=action, r[4]=actor_login, r[5]=reason #}
+        {% set action = (r[3] or '') %}
+        <tr>
+          <td>{{ r[0] }}</td>
+          <td>{{ et_labels.get(r[1], r[1]) }}</td>
+          <td class="center">{{ r[2] }}</td>
+          <td>
+            {% if action in ['restore','uncancel'] %}
+              <span class="badge ok">
+                {% if action == 'restore' %}Відновлено{% else %}Повернено{% endif %}
+              </span>
+            {% elif action in ['archive','archived','cancel','canceled'] %}
+              <span class="badge warn">
+                {% if action in ['archive','archived'] %}Архівовано{% else %}Скасовано{% endif %}
+              </span>
+            {% else %}
+              <span class="badge muted">{{ action }}</span>
+            {% endif %}
+          </td>
+          <td>{{ r[4] }}</td>
+          <td class="muted">{{ r[5] or '—' }}</td>
+        </tr>
+        {% endfor %}
+
+        {% if not rows %}
+        <tr>
+          <td colspan="6" class="center" style="padding:14px;">
+            Журнал порожній. Виконайте архівацію/відновлення — запис з’явиться тут.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "_pager.html" %}
+</section>
+
+{% endblock %}

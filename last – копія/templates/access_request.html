@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Запит на доступ{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Заявка на підвищення прав</h2>
+  <form method="post" class="inline-form" style="display:block;">
+    <label>Повідомлення <input name="message" placeholder="Коротко навіщо доступ"></label>
+    <button class="btn btn-ok">Надіслати</button>
+  </form>
+</section>
+{% endblock %}

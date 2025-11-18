@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Угоди{% endblock %}
+{% block content %}
+
+<section class="card">
+  <header class="card-head">
+    <h1>Угоди</h1>
+    <p class="sub">Контракти з покупцями та їхній статус</p>
+  </header>
+
+  <!-- Пошук -->
+  <div class="section">
+    <form method="get" class="inline-form">
+      <label>Пошук
+        <input name="q" value="{{ q or '' }}" placeholder="ID / покупець">
+      </label>
+      <button class="btn btn-sm">Знайти</button>
+    </form>
+  </div>
+
+  <!-- Додати угоду -->
+  <div class="section">
+    <form id="add" method="post" action="{{ url_for('inv.agreements_add') }}" class="inline-form">
+      <label>Покупець
+        <select name="customer_id" required>
+          {% for c in customers %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>№ угоди <input name="agreement_no" required></label>
+      <label>Дата <input name="agreement_dt" type="date" required></label>
+      <button type="submit" class="btn btn-sm btn-ok">Додати</button>
+    </form>
+  </div>
+
+  <!-- Таблиця -->
+  <div class="section grid-wrap table-dense">
+    <table class="grid">
+      <caption class="table-cap">Список угод</caption>
+      <thead>
+        <tr>
+          <th class="center">ID</th>
+          <th>№</th>
+          <th>Дата</th>
+          <th>Покупець</th>
+          <th class="center">Статус</th>
+          <th>Архівовано</th>
+          <th>Ким</th>
+          <th>Дії</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        {# r[0]=id, r[1]=no, r[2]=date, r[3]=customer, r[5]=is_active, r[6]=archived_at, r[7]=archived_by #}
+        <tr class="{{ '' if r[5] else 'archived' }}">
+          <td class="center">{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td>{{ r[2] }}</td>
+          <td>{{ r[3] }}</td>
+          <td class="center">
+            {% if r[5] %}
+              <span class="badge ok">активна</span>
+            {% else %}
+              <span class="badge warn">архів</span>
+            {% endif %}
+          </td>
+          <td class="muted">{{ r[6] or '—' }}</td>
+          <td class="muted">{{ r[7] or '—' }}</td>
+          <td class="actions">
+            {% if r[5] %}
+              <form method="post"
+                    action="{{ url_for('inv.agreements_archive', rid=r[0]) }}"
+                    onsubmit="return confirm('Архівувати угоду?');">
+                <input type="hidden" name="reason" value="Архівовано через UI">
+                <button type="submit" class="btn btn-sm btn-warn">Архівувати</button>
+              </form>
+            {% else %}
+              <form method="post"
+                    action="{{ url_for('inv.agreements_restore', rid=r[0]) }}"
+                    onsubmit="return confirm('Відновити угоду?');">
+                <button type="submit" class="btn btn-sm btn-ok">Відновити</button>
+              </form>
+            {% endif %}
+            <a class="btn btn-sm" href="{{ url_for('inv.agreements_edit', rid=r[0]) }}">Редагувати</a>
+          </td>
+        </tr>
+      {% endfor %}
+
+      {% if not rows %}
+        <tr>
+          <td colspan="8" class="center" style="padding:14px;">
+            Немає угод.
+            <a class="btn btn-sm btn-ok" href="#add"
+               onclick="const i=document.querySelector('#add input[name=agreement_no]'); if(i){i.focus();}">
+              Додати першу
+            </a>
+          </td>
+        </tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "_pager.html" %}
+</section>
+
+{% endblock %}

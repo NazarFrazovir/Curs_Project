@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Налаштування користувача{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width:960px;margin:auto;">
+  <h2>Налаштування користувача</h2>
+
+  <form method="post" action="{{ url_for('auth.settings_post') }}" class="inline-form" style="align-items:flex-start">
+    <label>
+
+    <label>
+      Щільність таблиць
+      <select name="density">
+        <option value="normal"  {{ 'selected' if prefs.density == 'normal' }}>Звичайна</option>
+        <option value="compact" {{ 'selected' if prefs.density == 'compact' }}>Щільна</option>
+      </select>
+    </label>
+
+    <label>
+      Рядків на сторінку (per_page)
+      <input type="number" name="per_page" min="5" max="100" step="5"
+             value="{{ prefs.per_page or 20 }}">
+    </label>
+
+    <div style="flex-basis:100%;height:1px;border-top:1px solid rgba(255,255,255,.08);margin:12px 0"></div>
+
+    <div class="actions">
+      <button class="btn btn-ok" type="submit">Зберегти</button>
+      <a class="btn" href="{{ url_for('dashboard') }}">На головну</a>
+    </div>
+  </form>
+
+  <p class="muted" style="margin-top:12px">
+    Останній вхід: {{ session.get('user',{}).get('last_login') or '—' }}
+  </p>
+</section>
+{% endblock %}

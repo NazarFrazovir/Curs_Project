@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Редагування користувача{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Редагування користувача #{{ r[0] }}</h2>
+  <p class="muted" style="margin-top:-6px;">Оновіть дані облікового запису та збережіть зміни.</p>
+
+  <form method="post"
+        action="{{ url_for('auth.users_update', rid=r[0]) }}"
+        class="inline-form"
+        style="display:block; max-width:720px;">
+
+    <label>Логін
+      <input name="login" value="{{ r[1]|default('') }}" required>
+    </label>
+
+    <label>Пароль
+      <input name="password" value="{{ r[2]|default('') }}" required>
+    </label>
+
+    <label>Роль
+      <select name="role" required>
+        <option value="Admin"      {% if r[3]=='Admin' %}selected{% endif %}>Admin</option>
+        <option value="Operator"   {% if r[3]=='Operator' %}selected{% endif %}>Operator</option>
+        <option value="Authorized" {% if r[3]=='Authorized' %}selected{% endif %}>Authorized</option>
+        <option value="Guest"      {% if r[3]=='Guest' %}selected{% endif %}>Guest</option>
+      </select>
+    </label>
+
+    <div class="actions" style="margin-top:8px;">
+      <button type="submit" class="btn btn-ok">Зберегти</button>
+      <a class="btn btn-sm" href="{{ url_for('auth.users_list') }}">Скасувати</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

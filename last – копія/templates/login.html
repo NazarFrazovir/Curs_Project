@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Вхід{% endblock %}
+{% block content %}
+<section class="card" style="max-width:900px;">
+  <h2>Вхід</h2>
+
+  <form method="post" action="{{ url_for('auth.login_post') }}" class="inline-form" style="display:block;">
+    <label>Логін
+      <input name="login" value="" required autofocus>
+    </label>
+    <label>Пароль
+      <input name="password" type="password" required>
+    </label>
+
+    <div class="actions" style="margin-top:10px; display:flex; gap:10px;">
+      <button class="btn btn-ok" type="submit">Увійти</button>
+      <a class="btn btn-sm" role="button" href="{{ url_for('auth.forgot') }}">Забули пароль?</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

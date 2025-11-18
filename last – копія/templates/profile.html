@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Профіль{% endblock %}
+{% block content %}
+<section class="card" style="max-width:720px;margin:18px auto;">
+  <h2>Профіль</h2>
+
+  <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+    <div class="card" style="padding:12px;">
+      <h3 style="margin-top:0;">Облікові дані</h3>
+      <p style="margin:.4rem 0;">Логін: <strong>{{ k[1] }}</strong></p>
+      <p style="margin:.4rem 0;">Роль:
+        <span class="role-badge">{{ k[2] }}</span>
+      </p>
+      {% if k[2]=='Guest' %}
+        <p class="muted" style="margin-top:.4rem;">Ви маєте роль «Guest». Для розширення прав подайте заявку.</p>
+        <div class="actions" style="margin-top:8px;">
+          <a class="btn btn-ok" href="{{ url_for('auth.request_access_get') }}">Подати заявку на доступ</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="card" style="padding:12px;">
+      <h3 style="margin-top:0;">Зміна пароля</h3>
+      <form method="post" action="{{ url_for('auth.profile_change_password') }}" class="inline-form" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <label>Поточний пароль
+          <input name="current_password" type="password" required>
+        </label>
+        <label>Новий пароль
+          <input name="new_password" type="password" required>
+        </label>
+        <label>Підтвердження
+          <input name="confirm_password" type="password" required>
+        </label>
+        <div style="align-self:end;">
+          <button class="btn btn-ok">Зберегти</button>
+        </div>
+      </form>
+      <p class="muted" style="margin:.4rem 0 0 0;">* У навчальному проєкті паролі зберігаються у таблиці <code>keys</code> у відкритому вигляді.</p>
+    </div>
+
+    <div class="card" style="padding:12px;">
+      <h3 style="margin-top:0;">Заявка на доступ</h3>
+      {% if last_req %}
+        <p style="margin:.4rem 0;">Статус останньої заявки: 
+          <span class="badge {{ 'warn' if last_req[2]=='pending' else ('ok' if last_req[2]=='approved' else '') }}">{{ last_req[2] }}</span>
+          {% if last_req[1] %} (на роль: <strong>{{ last_req[1] }}</strong>){% endif %}
+        </p>
+        <p class="muted" style="margin:.3rem 0;">
+          Подано: {{ last_req[3] }}{% if last_req[4] %}; опрацьовано: {{ last_req[4] }} адміністратором {{ last_req[5] or '' }}{% endif %}
+        </p>
+        {% if last_req[6] %}
+          <p class="muted" style="margin:.2rem 0;">Коментар адміністратора: {{ last_req[6] }}</p>
+        {% endif %}
+      {% else %}
+        <p class="muted" style="margin:.4rem 0;">Заявок не надсилали.</p>
+        {% if k[2]=='Guest' %}
+          <div class="actions" style="margin-top:8px;">
+            <a class="btn btn-ok" href="{{ url_for('auth.request_access_get') }}">Подати нову заявку</a>
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
