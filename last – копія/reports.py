@@ -1,4 +1,6 @@
 # reports.py
+from typing import Optional
+
 from flask import Blueprint, render_template, request, session, flash, redirect, url_for, Response
 from db import get_conn
 from datetime import datetime
@@ -486,7 +488,8 @@ def _sanitize_select(sql: str) -> str:
     return s
 
 
-def _build_wrapped_query(safe_sql: str, date_col: str | None, d1: str | None, d2: str | None, limit_raw: str | None):
+def _build_wrapped_query(safe_sql: str, date_col: Optional[str], d1: Optional[str], d2: Optional[str], limit_raw:
+Optional[str]):
     wrapped = f"SELECT * FROM ({safe_sql}) AS q"
     params = []
 

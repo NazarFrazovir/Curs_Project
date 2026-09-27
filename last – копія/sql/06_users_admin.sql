@@ -1,12 +1,41 @@
 -- 06_users_admin.sql
 SET search_path TO app, public;
 
--- Keys: унікальний логін + контроль ролей
-ALTER TABLE keys
-  ADD CONSTRAINT keys_login_uniq UNIQUE (login);
+-- Додаємо id, якщо його ще немає (для зв'язку з access_requests)
+ALTER TABLE keys ADD COLUMN IF NOT EXISTS id serial;
 
-ALTER TABLE keys
-  ADD CONSTRAINT keys_role_check CHECK (role IN ('Admin','Operator','Authorized','Guest'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'keys_id_uniq'
+  ) THEN
+    ALTER TABLE keys ADD CONSTRAINT keys_id_uniq UNIQUE (id);
+  END IF;
+END $$;
+
+-- Унікальність login (login і так PRIMARY KEY, цей constraint зайвий,
+-- але лишаємо ідемпотентним на випадок, якщо колись PK зміниться)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'keys_login_uniq'
+  ) THEN
+    ALTER TABLE keys ADD CONSTRAINT keys_login_uniq UNIQUE (login);
+  END IF;
+END $$;
+
+-- Перевірка ролей (у 00_schema.sql вже є CHECK на role,
+-- тож цей constraint, найімовірніше, зайвий і викличе помилку "already exists" —
+-- тому огортаємо перевіркою)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'keys_role_check2'
+  ) THEN
+    -- пропускаємо: обмеження на role вже задане в 00_schema.sql
+    NULL;
+  END IF;
+END $$;
 
 -- Заявки доступу (від Гостя до Авторизованого)
 CREATE TABLE IF NOT EXISTS access_requests (
