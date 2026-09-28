@@ -53,7 +53,7 @@ def create_app():
             "moves":     _one("SELECT COUNT(*) FROM stock_movements WHERE is_canceled=false") or 0,
         }
 
-        # Оціночна вартість складу (якщо існує view stock_balance)
+        # Оціночна вартість складу
         stock_value = _one("""
             SELECT COALESCE(SUM(b.balance_qty * p.sale_price), 0)
             FROM stock_balance b
