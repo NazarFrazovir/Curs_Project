@@ -1,41 +1,53 @@
+
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-wholesale_db}
-      POSTGRES_USER: ${POSTGRES_USER:-wholesale}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wholesale}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d:ro
+      - ./sql:/docker-entrypoint-initdb.d
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
-    networks: [backend]
+
+  # Проксі між застосунком і PostgreSQL для контрольованого Fault Injection.
+  # Керування збоями: ./fault.sh timeout | reset | status
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    restart: unless-stopped
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    volumes:
+      - ./toxiproxy.json:/config/toxiproxy.json:ro
+    ports:
+      - "8474:8474"
+    depends_on:
+      db:
+        condition: service_healthy
 
   web:
     build: .
     restart: unless-stopped
     environment:
-      SECRET_KEY: ${SECRET_KEY:-dev_secret_change_me}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-wholesale}:${POSTGRES_PASSWORD:-wholesale}@db:5432/${POSTGRES_DB:-wholesale_db}
-      HOST: 0.0.0.0
-      PORT: 5000
+      SECRET_KEY: ${SECRET_KEY}
+      # Застосунок ходить у БД через toxiproxy, а не напряму.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@toxiproxy:6432/${POSTGRES_DB}
+      DB_CONNECT_TIMEOUT: "2"
+      DB_RETRY_ATTEMPTS: "3"
+      DB_RETRY_BASE_DELAY: "0.1"
+      DB_RETRY_MAX_DELAY: "1.0"
     ports:
       - "5050:5000"
     depends_on:
-      db:
-        condition: service_healthy
-    networks: [backend]
+      - toxiproxy
 
 volumes:
   pg_data:
-
-networks:
-  backend:
-    driver: bridge

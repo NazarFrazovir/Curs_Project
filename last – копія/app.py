@@ -6,8 +6,11 @@ from db import get_conn, release_conn
 from auth import bp as auth_bp
 from inventory import bp as inv_bp
 from reports import bp as reports_bp
+import logging
+from api import bp as api_bp
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 def create_app():
     app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -17,6 +20,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(inv_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(api_bp)
 
     # ===== Локальні хелпери для коротких запитів на головній =====
     def _one(sql, params=()):

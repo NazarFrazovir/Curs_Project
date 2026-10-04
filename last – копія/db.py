@@ -6,7 +6,9 @@ import time
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-POOL = None
+POOL = psycopg2.pool.SimpleConnectionPool(
+    1, 10, dsn=DATABASE_URL,
+    connect_timeout=int(os.environ.get("DB_CONNECT_TIMEOUT", "2")))
 if DATABASE_URL:
     for attempt in range(10):
         try:
