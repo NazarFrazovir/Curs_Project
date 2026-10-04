@@ -524,7 +524,6 @@ def movements_add():
     supplier_id = request.form.get('supplier_id') or None
     customer_id = request.form.get('customer_id') or None
     agreement_id = request.form.get('agreement_id') or None
-    assert (qty, "Кількість обов'язкова")  # ← НАВМИСНИЙ БАГ (S5905)
 
     if mtype == 'IN':
         customer_id = None
@@ -769,54 +768,25 @@ def movements_edit(rid):
 
 @bp.post('/movements/<int:rid>/update')
 def movements_update(rid):
-    if not require_role('Admin','Operator'):
-        flash('Редагувати може лише оператор/адміністратор', 'error')
-        return redirect(url_for('inv.movements_list'))
+    if not require_role('Admin', 'Operator'):
+        return _back('Редагувати може лише оператор/адміністратор')
     rows = fetchall("SELECT is_canceled FROM stock_movements WHERE id=%s", (rid,))
     if not rows:
-        flash('Рух не знайдено', 'error')
-        return redirect(url_for('inv.movements_list'))
+        return _back('Рух не знайдено')
     if rows[0][0]:
-        flash('Скасований рух редагувати не можна', 'error')
-        return redirect(url_for('inv.movements_list'))
-    mtype = request.form.get('mtype')
-    movement_dt = request.form.get('movement_dt') or None
-    product_id = request.form.get('product_id')
-    qty = request.form.get('qty')
-    price = request.form.get('price')
-    supplier_id = request.form.get('supplier_id') or None
-    customer_id = request.form.get('customer_id') or None
-    agreement_id = request.form.get('agreement_id') or None
-    if mtype == 'IN':
-        customer_id = None
-    elif mtype == 'OUT':
-        supplier_id = None
-    else:
-        flash('Невірний тип руху', 'error')
-        return redirect(url_for('inv.movements_list'))
-
-    # На UPDATE рахуємо баланс без поточного рядка
-    if mtype == 'OUT':
-        row = fetchone("""
-            SELECT COALESCE(SUM(CASE WHEN is_canceled THEN 0
-                                     WHEN mtype='IN'  THEN qty
-                                     ELSE -qty END), 0)
-            FROM stock_movements
-            WHERE product_id=%s AND is_canceled=false AND id<>%s
-        """, (product_id, rid))
-        available = row[0] if row else 0
-        if available < float(qty):
-            flash(f'Недостатньо залишку. Доступно: {available}, запитано: {qty}', 'error')
-            return redirect(url_for('inv.movements_list'))
-
-
+        return _back('Скасований рух редагувати не можна')
+    m = _read_movement_form()
+    error = _validate_movement(m, exclude_id=rid)
+    if error:
+        return _back(error)
     execute("""
         UPDATE stock_movements
            SET movement_dt = COALESCE(%s::timestamptz, movement_dt),
-               mtype=%s, product_id=%s, supplier_id=%s, customer_id=%s, agreement_id=%s,
-               qty=%s, price=%s
+               mtype=%s, product_id=%s, supplier_id=%s, customer_id=%s,
+               agreement_id=%s, qty=%s, price=%s
          WHERE id=%s
-    """, (movement_dt, mtype, product_id, supplier_id, customer_id, agreement_id, qty, price, rid))
+    """, (m['movement_dt'], m['mtype'], m['product_id'], m['supplier_id'],
+          m['customer_id'], m['agreement_id'], m['qty'], m['price'], rid))
     flash('Зміни збережено', 'ok')
     return redirect(url_for('inv.movements_list'))
 
