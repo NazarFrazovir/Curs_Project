@@ -516,45 +516,6 @@ def movements_add():
     flash('Рух додано', 'ok')
     return redirect(url_for('inv.movements_list'))
 
-    mtype = request.form.get('mtype')
-    movement_dt = request.form.get('movement_dt') or None
-    product_id = request.form.get('product_id')
-    qty = request.form.get('qty')
-    price = request.form.get('price')
-    supplier_id = request.form.get('supplier_id') or None
-    customer_id = request.form.get('customer_id') or None
-    agreement_id = request.form.get('agreement_id') or None
-
-    if mtype == 'IN':
-        customer_id = None
-    elif mtype == 'OUT':
-        supplier_id = None
-    else:
-        flash('Невірний тип руху', 'error')
-        return redirect(url_for('inv.movements_list'))
-
-    # М'яка перевірка на рівні застосунку (БД теж перевіряє тригером)
-    if mtype == 'OUT':
-        row = fetchone("""
-            SELECT COALESCE(SUM(CASE WHEN is_canceled THEN 0
-                                     WHEN mtype='IN'  THEN qty
-                                     ELSE -qty END), 0)
-            FROM stock_movements
-            WHERE product_id=%s AND is_canceled=false
-        """, (product_id,))
-        available = row[0] if row else 0
-        if available < float(qty):
-            flash(f'Недостатньо залишку. Доступно: {available}, запитано: {qty}', 'error')
-            return redirect(url_for('inv.movements_list'))
-
-
-    execute("""
-      INSERT INTO stock_movements(movement_dt, mtype, product_id, supplier_id, customer_id, agreement_id, qty, price)
-      VALUES (COALESCE(%s::timestamptz, now()), %s, %s, %s, %s, %s, %s, %s)
-    """, (movement_dt, mtype, product_id, supplier_id, customer_id, agreement_id, qty, price))
-    flash('Рух додано', 'ok')
-    return redirect(url_for('inv.movements_list'))
-
 @bp.post('/movements/<int:rid>/cancel')
 def movements_cancel(rid):
     if not require_role('Admin','Operator'):
