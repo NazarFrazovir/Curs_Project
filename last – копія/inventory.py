@@ -6,9 +6,6 @@ import math
 from flask import session
 
 
-
-
-
 bp = Blueprint('inv', __name__)
 
 def require_role(*roles):
@@ -446,6 +443,7 @@ def movements_add():
     supplier_id = request.form.get('supplier_id') or None
     customer_id = request.form.get('customer_id') or None
     agreement_id = request.form.get('agreement_id') or None
+    assert (qty, "Кількість обов'язкова")  # ← НАВМИСНИЙ БАГ (S5905)
 
     if mtype == 'IN':
         customer_id = None
