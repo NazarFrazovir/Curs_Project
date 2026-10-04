@@ -430,11 +430,92 @@ def movements_list():
         q=q, page=page, pages=pages, per_page=per_page, qs_base=qs_base, total=total
     )
 
+
+# ---------- Movements: спільна логіка ----------
+
+def _back(msg):
+    flash(msg, 'error')
+    return redirect(url_for('inv.movements_list'))
+
+
+def _read_movement_form():
+    f = request.form
+    return {
+        'mtype': f.get('mtype'),
+        'movement_dt': f.get('movement_dt') or None,
+        'product_id': f.get('product_id'),
+        'qty': f.get('qty'),
+        'price': f.get('price'),
+        'supplier_id': f.get('supplier_id') or None,
+        'customer_id': f.get('customer_id') or None,
+        'agreement_id': f.get('agreement_id') or None,
+    }
+
+
+def _normalize_parties(m):
+    """IN — без клієнта, OUT — без постачальника. False, якщо тип невірний."""
+    if m['mtype'] == 'IN':
+        m['customer_id'] = None
+    elif m['mtype'] == 'OUT':
+        m['supplier_id'] = None
+    else:
+        return False
+    return True
+
+
+def _qty_error(qty):
+    try:
+        value = float(qty)
+    except (TypeError, ValueError):
+        return 'Невірна кількість'
+    return None if value > 0 else 'Кількість має бути додатною'
+
+
+def _available_qty(product_id, exclude_id=None):
+    row = fetchone("""
+        SELECT COALESCE(SUM(CASE WHEN mtype='IN' THEN qty ELSE -qty END), 0)
+        FROM stock_movements
+        WHERE product_id=%s AND is_canceled=false
+          AND (%s IS NULL OR id <> %s)
+    """, (product_id, exclude_id, exclude_id))
+    return row[0] if row else 0
+
+
+def _validate_movement(m, exclude_id=None):
+    """Повертає текст помилки або None, якщо рух коректний."""
+    error = _qty_error(m['qty'])
+    if error:
+        return error
+    if not _normalize_parties(m):
+        return 'Невірний тип руху'
+    if m['mtype'] != 'OUT':
+        return None
+    available = _available_qty(m['product_id'], exclude_id)
+    if available < float(m['qty']):
+        return f"Недостатньо залишку. Доступно: {available}, запитано: {m['qty']}"
+    return None
+
+
+def _insert_movement(m):
+    execute("""
+      INSERT INTO stock_movements(movement_dt, mtype, product_id, supplier_id,
+                                  customer_id, agreement_id, qty, price)
+      VALUES (COALESCE(%s::timestamptz, now()), %s, %s, %s, %s, %s, %s, %s)
+    """, (m['movement_dt'], m['mtype'], m['product_id'], m['supplier_id'],
+          m['customer_id'], m['agreement_id'], m['qty'], m['price']))
+
 @bp.post('/movements/add')
 def movements_add():
-    if not require_role('Admin','Operator'):
-        flash('Доступ лише для оператора/адміністратора', 'error')
-        return redirect(url_for('inv.movements_list'))
+    if not require_role('Admin', 'Operator'):
+        return _back('Доступ лише для оператора/адміністратора')
+    m = _read_movement_form()
+    error = _validate_movement(m)
+    if error:
+        return _back(error)
+    _insert_movement(m)
+    flash('Рух додано', 'ok')
+    return redirect(url_for('inv.movements_list'))
+
     mtype = request.form.get('mtype')
     movement_dt = request.form.get('movement_dt') or None
     product_id = request.form.get('product_id')
