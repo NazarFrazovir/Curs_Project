@@ -2,5 +2,5 @@ projectKey=curs-project
 serverUrl=http://localhost:9000
 serverVersion=26.9.0.129388
 dashboardUrl=http://localhost:9000/dashboard?id=curs-project
-ceTaskId=f379a18a-530e-42e3-8ac9-f35e8043c6e9
-ceTaskUrl=http://localhost:9000/api/ce/task?id=f379a18a-530e-42e3-8ac9-f35e8043c6e9
+ceTaskId=21b8b471-b8af-4b00-816c-3525d652e553
+ceTaskUrl=http://localhost:9000/api/ce/task?id=21b8b471-b8af-4b00-816c-3525d652e553
