@@ -77,8 +77,6 @@ def logout():
 
 # ======== Адмін: Користувачі (Keys) ========
 
-from flask import request, render_template, redirect, url_for, session, flash
-from db import get_conn
 
 def _is_admin():
     return session.get('user', {}).get('role') == 'Admin'
@@ -110,7 +108,8 @@ def _exec_do(q, p=()):
 @bp.get('/admin/users')
 def users_list():
     redir = _require_admin_redirect()
-    if redir: return redir
+    if redir:
+        return redir
 
     page, per_page, qs_base, args = _pg_args()
     q = (args.get('q') or '').strip()
@@ -141,7 +140,8 @@ def users_list():
 @bp.post('/admin/users/add')
 def users_add():
     redir = _require_admin_redirect('auth.users_list')
-    if redir: return redir
+    if redir:
+        return redir
     login = (request.form.get('login') or '').strip()
     password = (request.form.get('password') or '').strip()
     role = request.form.get('role') or 'Guest'
@@ -158,7 +158,8 @@ def users_add():
 @bp.get('/admin/users/<int:rid>/edit')
 def users_edit(rid):
     redir = _require_admin_redirect('auth.users_list')
-    if redir: return redir
+    if redir:
+        return redir
     r = _exec_one("SELECT id, login, password, role FROM keys WHERE id=%s", (rid,))
     if not r:
         flash('Користувача не знайдено', 'error')
@@ -168,7 +169,8 @@ def users_edit(rid):
 @bp.post('/admin/users/<int:rid>/update')
 def users_update(rid):
     redir = _require_admin_redirect('auth.users_list')
-    if redir: return redir
+    if redir:
+        return redir
     login = (request.form.get('login') or '').strip()
     password = (request.form.get('password') or '').strip()
     role = request.form.get('role') or 'Guest'
@@ -246,7 +248,8 @@ def request_access_post():
 @bp.get('/admin/access-requests')
 def requests_list():
     redir = _require_admin_redirect()
-    if redir: return redir
+    if redir:
+        return redir
     rows = _exec_all("""
       SELECT ar.id, k.login, k.role, ar.requested_role, ar.message, ar.status,
              ar.requested_at, ar.processed_at, ar.processed_by, ar.admin_comment
@@ -259,7 +262,8 @@ def requests_list():
 @bp.post('/admin/access-requests/<int:rid>/approve')
 def requests_approve(rid):
     redir = _require_admin_redirect('auth.requests_list')
-    if redir: return redir
+    if redir:
+        return redir
     admin = session.get('user',{}).get('login') or 'admin'
     # Отримаємо user_id і бажану роль
     row = _exec_one("SELECT user_id, requested_role FROM access_requests WHERE id=%s AND status='pending'", (rid,))
@@ -280,7 +284,8 @@ def requests_approve(rid):
 @bp.post('/admin/access-requests/<int:rid>/deny')
 def requests_deny(rid):
     redir = _require_admin_redirect('auth.requests_list')
-    if redir: return redir
+    if redir:
+        return redir
     admin = session.get('user',{}).get('login') or 'admin'
     comment = (request.form.get('admin_comment') or '').strip() or None
     _exec_do("""
@@ -303,7 +308,8 @@ def _require_login_redirect():
 @bp.get('/profile')
 def profile_get():
     redir = _require_login_redirect()
-    if redir: return redir
+    if redir:
+        return redir
 
     login = session['user']['login']
     k = _exec_one("SELECT id, login, role FROM keys WHERE login=%s", (login,))
@@ -325,7 +331,8 @@ def profile_get():
 @bp.post('/profile/change-password')
 def profile_change_password():
     redir = _require_login_redirect()
-    if redir: return redir
+    if redir:
+        return redir
 
     login = session['user']['login']
     cur_pw = (request.form.get('current_password') or '').strip()
@@ -402,7 +409,6 @@ def settings_post():
     # якщо є якісь дефолтні фільтри з форми — зібрати в dict
     default_filter = {}
 
-    import json
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute("SET search_path TO app, public;")
         cur.execute("""

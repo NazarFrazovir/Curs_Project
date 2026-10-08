@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
 from db import get_conn
-import csv, io
+import csv
+import io
 from urllib.parse import urlencode
 import math
-from flask import session
 
 
 bp = Blueprint('inv', __name__)
@@ -801,8 +801,6 @@ def balance_csv():
     """
     rows = fetchall(sql, (q, q, supplier_id, supplier_id, show_zero))
 
-    import csv, io
-    from flask import Response
     output = io.StringIO()
     w = csv.writer(output, lineterminator='\n')
     w.writerow(['ID товару', 'Товар', 'Од.', 'Постачальник', 'Прихід', 'Витрата', 'Залишок'])

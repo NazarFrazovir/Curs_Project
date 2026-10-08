@@ -12,7 +12,7 @@ POOL = None
 if DATABASE_URL:
     for attempt in range(10):
         try:
-            POOL = psycopg2.pool.SimpleConnectionPool(
+            POOL = pool.SimpleConnectionPool(
                 1, 10, dsn=DATABASE_URL, connect_timeout=CONNECT_TIMEOUT)
             break
         except psycopg2.OperationalError:

@@ -18,6 +18,6 @@ try:
         cur.execute(create_table_query)
         conn.commit()
         print("УСПІХ: Таблицю user_prefs створено!")
-except Exception as e:
+except Exception:
     import traceback
     traceback.print_exc()
