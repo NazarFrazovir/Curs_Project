@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Блокує коміт, якщо у staged-змінах є секрети (ненульовий код виходу скасовує коміт).
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks не знайдено: brew install gitleaks" >&2
+  exit 1
+fi
+exec gitleaks git --staged --redact --verbose --no-banner
