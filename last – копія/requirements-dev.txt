@@ -1,2 +1,5 @@
 -r requirements.txt
 pytest>=8.0
+pip-audit>=2.7
+radon>=6.0
+complexipy>=3.0
