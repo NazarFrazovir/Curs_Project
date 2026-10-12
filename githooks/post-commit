@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+ROOT="$(git rev-parse --show-toplevel)"
+if [ -f "$ROOT/.sonar-token" ]; then
+  export SONAR_TOKEN="$(cat "$ROOT/.sonar-token")"
+fi
+SCAN="$(find "$ROOT" -maxdepth 2 -name scan.sh -not -path '*/.git/*' | head -n 1)"
+[ -n "$SCAN" ] || { echo "⚠ scan.sh не знайдено"; exit 0; }
+cd "$(dirname "$SCAN")"
+echo "▶ SonarQube: запускаю аналіз у $(pwd)"
+./scan.sh || echo "⚠ Аналіз не вдався (коміт збережено)"
