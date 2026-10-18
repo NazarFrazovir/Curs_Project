@@ -19,6 +19,19 @@ jobs:
   build-test:
     name: Build & test (${{ matrix.service }})
     runs-on: ubuntu-latest
+    # PostgreSQL для інтеграційних тестів ЛР4 (tests/gdpr): схема створюється з sql/*.sql
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wholesale_test
+          POSTGRES_HOST_AUTH_METHOD: trust   # одноразова БД раннера, паролі не потрібні
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wholesale_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres@localhost:5432/wholesale_test
     strategy:
       fail-fast: false            # падіння одного сервісу не скасовує інші
       matrix:
