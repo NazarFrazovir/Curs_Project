@@ -1,0 +1,19 @@
+# Нечутливі параметри. Підключаються до застосунку й до PostgreSQL як змінні оточення (envFrom / valueFrom).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: curs-config
+  namespace: curs-project
+  labels:
+    app.kubernetes.io/part-of: curs-project
+data:
+  # PostgreSQL
+  POSTGRES_DB: wholesale_db
+  POSTGRES_USER: postgres
+  # Застосунок (resilience.py, db.py, privacy/logging_setup.py)
+  DB_CONNECT_TIMEOUT: "2"
+  DB_RETRY_ATTEMPTS: "3"
+  DB_RETRY_BASE_DELAY: "0.1"
+  DB_RETRY_MAX_DELAY: "1.0"
+  LOG_LEVEL: INFO
+  LOG_FORMAT: text
