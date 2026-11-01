@@ -1,0 +1,23 @@
+# ЛР5: ізольований, відтворюваний раннер метрик якості.
+# Один і той самий образ використовується локально і в CI, тому числа порівнювані.
+#
+# Версія інтерпретатора збігається з Dockerfile застосунку і CI (3.11).
+# Для повної фіксації замініть тег на digest:
+#   docker pull python:3.11-slim-bookworm
+#   docker inspect --format '{{index .RepoDigests 0}}' python:3.11-slim-bookworm
+#   -> FROM python@sha256:<digest>
+FROM python:3.11-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    PYTHONUTF8=1
+
+WORKDIR /src
+COPY requirements.txt requirements-quality.txt ./
+RUN pip install -r requirements.txt -r requirements-quality.txt
+
+# Код монтується томом (read-only) — образ містить лише інструменти.
+ENTRYPOINT ["sh", "-c", "python scripts/check_text_hygiene.py . && python scripts/collect_metrics.py --out /out/metrics.json"]

@@ -1,0 +1,13 @@
+# ЛР5: інструменти вимірювань із ЖОРСТКО зафіксованими версіями (==).
+# Причина (Reliability Test): одна й та сама кодова база дає різні числа на різних версіях:
+#   complexipy 1.2.0 / 3.0.0 / 4.0.0 / 8.3.0 -> Cognitive Complexity reports.py = 75 / 75 / 80 / 78
+#   lizard 1.17.10 vs 1.24.3                -> NLOC проєкту 3190 vs 2919 (-8.5%)
+#   complexipy 1.2.0 без фіксації click     -> падіння CLI (TypeError у typer/click)
+# Оновлювати версії лише окремим PR з перерахунком baseline-метрик.
+lizard==1.24.3
+radon==6.0.1
+complexipy==8.3.0
+ruff==0.7.4
+coverage==7.17.0
+mutmut==3.8.1
+pytest==9.2.0

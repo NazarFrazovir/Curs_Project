@@ -1,0 +1,74 @@
+    resilience.x_backoff_delay__mutmut_3: survived
+    resilience.x_backoff_delay__mutmut_7: survived
+    resilience.x_backoff_delay__mutmut_28: survived
+    resilience.x_call_with_retry__mutmut_3: survived
+    resilience.x_call_with_retry__mutmut_13: survived
+    resilience.x_call_with_retry__mutmut_15: survived
+    resilience.x_call_with_retry__mutmut_16: survived
+    resilience.x_call_with_retry__mutmut_17: survived
+    resilience.x_call_with_retry__mutmut_18: survived
+    resilience.x_call_with_retry__mutmut_19: survived
+    resilience.x_call_with_retry__mutmut_20: survived
+    resilience.x_call_with_retry__mutmut_21: survived
+    resilience.x_call_with_retry__mutmut_22: survived
+    resilience.x_call_with_retry__mutmut_23: survived
+    resilience.x_call_with_retry__mutmut_24: survived
+    resilience.x_call_with_retry__mutmut_26: survived
+    resilience.x_call_with_retry__mutmut_27: survived
+    resilience.x_call_with_retry__mutmut_28: survived
+    resilience.x_call_with_retry__mutmut_29: survived
+    resilience.x_call_with_retry__mutmut_30: survived
+    resilience.x_call_with_retry__mutmut_31: survived
+    resilience.x_call_with_retry__mutmut_32: survived
+    resilience.x_call_with_retry__mutmut_33: survived
+    resilience.x_call_with_retry__mutmut_34: survived
+    resilience.x_call_with_retry__mutmut_35: survived
+    resilience.x_call_with_retry__mutmut_36: survived
+    resilience.x_call_with_retry__mutmut_37: survived
+    resilience.x_call_with_retry__mutmut_38: survived
+    resilience.x_call_with_retry__mutmut_39: survived
+    api.x__query_balance__mutmut_1: no tests
+    api.x__query_balance__mutmut_2: no tests
+    api.x__query_balance__mutmut_3: no tests
+    api.x__query_balance__mutmut_4: no tests
+    api.x__query_balance__mutmut_5: no tests
+    api.x__query_balance__mutmut_6: no tests
+    api.x__query_balance__mutmut_7: no tests
+    api.x__query_balance__mutmut_8: no tests
+    api.x__query_balance__mutmut_9: no tests
+    api.x__query_balance__mutmut_10: no tests
+    api.x__query_balance__mutmut_11: no tests
+    api.x__query_balance__mutmut_12: no tests
+    api.x__query_balance__mutmut_13: no tests
+    api.x__query_balance__mutmut_14: no tests
+    api.x__query_balance__mutmut_15: no tests
+    api.x__query_balance__mutmut_16: no tests
+    api.x__query_balance__mutmut_17: no tests
+    api.x__query_balance__mutmut_18: no tests
+    api.x__fallback__mutmut_2: survived
+    api.x__fallback__mutmut_4: survived
+    api.x__fallback__mutmut_5: survived
+    api.x__fallback__mutmut_11: survived
+    api.x__fallback__mutmut_13: survived
+    api.x__fallback__mutmut_17: survived
+    api.x__fallback__mutmut_20: survived
+    api.x__fallback__mutmut_22: survived
+    api.x__fallback__mutmut_25: survived
+    api.x__fallback__mutmut_27: survived
+    api.x__fallback__mutmut_28: survived
+    api.x__fallback__mutmut_36: survived
+    api.x__fallback__mutmut_37: survived
+    api.x__fallback__mutmut_39: survived
+    api.x__fallback__mutmut_40: survived
+    api.x__fallback__mutmut_44: survived
+    api.x__fallback__mutmut_45: survived
+    api.x__fallback__mutmut_46: survived
+    api.x__fallback__mutmut_48: survived
+    api.x__fallback__mutmut_49: survived
+    api.x__fallback__mutmut_50: survived
+    api.x__fallback__mutmut_53: survived
+    api.x__fallback__mutmut_54: survived
+    api.x__fallback__mutmut_55: survived
+    api.x__fallback__mutmut_56: survived
+    api.x__fallback__mutmut_59: survived
+    api.x__fallback__mutmut_60: survived
