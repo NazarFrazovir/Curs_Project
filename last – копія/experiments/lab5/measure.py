@@ -1,111 +1,104 @@
-"""Збирає статичні метрики одного файлу через CLI lizard / radon / complexipy / ruff.
-Використання: python measure.py <file> -> JSON у stdout."""
+"""ЛР5, Reliability Test: метрики одного файлу через lizard / radon / complexipy / ruff.
 
+Використання: python measure.py <файл у поточному каталозі> -> JSON у stdout.
+Інструменти беруться з того ж віртуального оточення, що й інтерпретатор
+(так порівнювалися різні версії Python та інструментів).
+"""
 import json
 import os
 import platform
 import subprocess
 import sys
+import tempfile
 
-f = sys.argv[1]
-bindir = os.path.dirname(sys.executable)
-
-
-def run(cmd):
-    p = subprocess.run(cmd, capture_output=True, text=True)
-    return p.returncode, p.stdout, p.stderr
+BIN_DIR = os.path.dirname(sys.executable)
 
 
-out = {"python": platform.python_version()}
-# --- lizard
-rc, so, se = run([f"{bindir}/lizard", "--version"])
-out["lizard_ver"] = so.strip() or se.strip()
-rc, so, se = run([f"{bindir}/lizard", "-l", "python", "--csv", f])
-if rc in (0, 1) and so.strip():
+def safe_path(user_path):
+    """Лише існуючий файл усередині поточного каталогу (захист від path traversal)."""
+    base = os.path.realpath(os.getcwd())
+    path = os.path.realpath(os.path.join(base, user_path))
+    if os.path.commonpath([base, path]) != base or not os.path.isfile(path):
+        raise SystemExit(f"Очікується файл усередині {base}: {user_path}")
+    return path
+
+
+def run(tool, *args):
+    p = subprocess.run([os.path.join(BIN_DIR, tool), *args], capture_output=True, text=True)
+    return p.stdout, p.stderr
+
+
+def first_value(json_text):
+    """radon -j повертає {шлях: дані} для одного файлу."""
+    return next(iter(json.loads(json_text).values()))
+
+
+def lizard(f, out):
+    out["lizard_ver"] = run("lizard", "--version")[0].strip()
+    so, se = run("lizard", "-l", "python", "--csv", "--", f)
     rows = [r.split(",") for r in so.strip().splitlines()]
-    nloc = [int(r[0]) for r in rows]
+    if not rows:
+        out["lizard_error"] = se.strip()[-120:]
+        return
     ccn = [int(r[1]) for r in rows]
-    tok = [int(r[2]) for r in rows]
-    out.update(
-        lizard_funcs=len(rows),
-        lizard_nloc_funcs=sum(nloc),
-        lizard_ccn_sum=sum(ccn),
-        lizard_ccn_max=max(ccn),
-        lizard_tokens=sum(tok),
-    )
-else:
-    out["lizard_error"] = (se or so).strip().splitlines()[-1:]
-# --- radon
-rc, so, se = run([f"{bindir}/radon", "--version"])
-out["radon_ver"] = so.strip()
-rc, so, se = run([f"{bindir}/radon", "raw", "-j", f])
-try:
-    raw = list(json.loads(so).values())[0]
-    if "error" in raw:
-        out["radon_raw_error"] = raw["error"][:120]
-    else:
-        out.update(
-            radon_loc=raw["loc"],
-            radon_lloc=raw["lloc"],
-            radon_sloc=raw["sloc"],
-            radon_comments=raw["comments"],
-            radon_blank=raw["blank"],
-        )
-except Exception as e:
-    out["radon_raw_error"] = (se or str(e))[-120:]
-rc, so, se = run([f"{bindir}/radon", "cc", "-j", f])
-try:
-    blocks = list(json.loads(so).values())[0]
-    if isinstance(blocks, dict) and "error" in blocks:
-        out["radon_cc_error"] = blocks["error"][:120]
-    else:
-        cc = [b["complexity"] for b in blocks]
-        out.update(radon_cc_blocks=len(cc), radon_cc_sum=sum(cc), radon_cc_max=max(cc))
-except Exception as e:
-    out["radon_cc_error"] = (se or str(e))[-120:]
-rc, so, se = run([f"{bindir}/radon", "mi", "-j", "-s", f])
-try:
-    mi = list(json.loads(so).values())[0]
-    if "error" in mi:
-        out["radon_mi_error"] = mi["error"][:120]
-    else:
-        out.update(radon_mi=round(mi["mi"], 2), radon_mi_rank=mi["rank"])
-except Exception as e:
-    out["radon_mi_error"] = (se or str(e))[-120:]
-# --- complexipy (когнітивна складність)
-if os.path.exists(f"{bindir}/complexipy"):
-    rc, so, se = run([f"{bindir}/complexipy", "--version"])
-    out["complexipy_ver"] = (so or se).strip()
-    import tempfile
+    out.update(lizard_funcs=len(rows), lizard_nloc_funcs=sum(int(r[0]) for r in rows),
+               lizard_ccn_sum=sum(ccn), lizard_ccn_max=max(ccn),
+               lizard_tokens=sum(int(r[2]) for r in rows))
 
-    tmp = tempfile.mktemp(suffix=".json")
-    rc, so, se = run(
-        [f"{bindir}/complexipy", f, "--output-format", "json", "--output", tmp, "-q"]
-    )
-    try:
-        data = json.load(open(tmp))
-        cx = [d["complexity"] for d in data]
-        out.update(cognitive_total=sum(cx), cognitive_max=max(cx))
-    except Exception:
-        out["cognitive_error"] = ((se or so).strip().splitlines() or ["?"])[-1][:120]
-# --- ruff як джерело Code Smells (фіксований набір правил)
-if os.path.exists(f"{bindir}/ruff"):
-    rc, so, se = run([f"{bindir}/ruff", "--version"])
-    out["ruff_ver"] = so.strip()
-    rc, so, se = run(
-        [
-            f"{bindir}/ruff",
-            "check",
-            "--isolated",
-            "--select",
-            "E,F,W,C90,B,SIM",
-            "--output-format",
-            "json",
-            f,
-        ]
-    )
+
+def radon(f, out):
+    out["radon_ver"] = run("radon", "--version")[0].strip()
+    fields = {
+        "raw": lambda d: dict(radon_loc=d["loc"], radon_lloc=d["lloc"], radon_sloc=d["sloc"],
+                              radon_comments=d["comments"], radon_blank=d["blank"]),
+        "cc": lambda d: dict(radon_cc_blocks=len(d), radon_cc_sum=sum(b["complexity"] for b in d),
+                             radon_cc_max=max(b["complexity"] for b in d)),
+        "mi": lambda d: dict(radon_mi=round(d["mi"], 2), radon_mi_rank=d["rank"]),
+    }
+    for kind, extract in fields.items():
+        args = [kind, "-j", "-s", "--", f] if kind == "mi" else [kind, "-j", "--", f]
+        so, se = run("radon", *args)
+        try:
+            data = first_value(so)
+        except (ValueError, StopIteration):
+            out[f"radon_{kind}_error"] = se.strip()[-120:]
+            continue
+        if isinstance(data, dict) and "error" in data:
+            out[f"radon_{kind}_error"] = data["error"][:120]
+        else:
+            out.update(extract(data))
+
+
+def complexipy(f, out):
+    out["complexipy_ver"] = run("complexipy", "--version")[0].strip()
+    with tempfile.TemporaryDirectory() as tmp:
+        report = os.path.join(tmp, "cx.json")
+        so, se = run("complexipy", f, "--output-format", "json", "--output", report, "-q")
+        try:
+            with open(report, encoding="utf-8") as fh:
+                cx = [d["complexity"] for d in json.load(fh)]
+            out.update(cognitive_total=sum(cx), cognitive_max=max(cx))
+        except (OSError, ValueError, KeyError):
+            out["cognitive_error"] = ((se or so).strip().splitlines() or ["?"])[-1][:120]
+
+
+def ruff(f, out):
+    out["ruff_ver"] = run("ruff", "--version")[0].strip()
+    so, se = run("ruff", "check", "--isolated", "--select", "E,F,W,C90,B,SIM",
+                 "--output-format", "json", "--", f)
     try:
         out["ruff_smells"] = len(json.loads(so))
-    except Exception:
+    except ValueError:
         out["ruff_smells"] = "ERR: " + (se.strip().splitlines() or ["?"])[-1][:100]
-print(json.dumps(out, ensure_ascii=False))
+
+
+def main():
+    f = safe_path(sys.argv[1])
+    out = {"python": platform.python_version()}
+    for tool in (lizard, radon, complexipy, ruff):
+        tool(f, out)
+    print(json.dumps(out, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

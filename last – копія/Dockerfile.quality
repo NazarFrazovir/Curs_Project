@@ -16,8 +16,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUTF8=1
 
 WORKDIR /src
-COPY requirements.txt requirements-quality.txt ./
-RUN pip install -r requirements.txt -r requirements-quality.txt
+# lock-файл із sha256-хешами всіх (у т.ч. транзитивних) пакетів; лише готові wheel —
+# жодних setup.py під час встановлення
+COPY requirements-quality.lock ./
+RUN pip install --require-hashes --only-binary :all: -r requirements-quality.lock
+
+# аналізатори не потребують root
+RUN useradd --create-home --uid 10001 quality
+USER quality
 
 # Код монтується томом (read-only) — образ містить лише інструменти.
 ENTRYPOINT ["sh", "-c", "python scripts/check_text_hygiene.py . && python scripts/collect_metrics.py --out /out/metrics.json"]

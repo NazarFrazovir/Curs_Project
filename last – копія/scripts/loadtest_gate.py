@@ -16,12 +16,27 @@
 """
 import argparse
 import json
+import os
 import statistics
 import sys
 
 
+def safe_path(user_path):
+    """Шлях лише всередині поточного каталогу проєкту (захист від path traversal)."""
+    base = os.path.realpath(os.getcwd())
+    path = os.path.realpath(os.path.join(base, user_path))
+    if os.path.commonpath([base, path]) != base:
+        raise SystemExit(f"Шлях поза каталогом проєкту: {user_path}")
+    return path
+
+
+def read_json(user_path):
+    with open(safe_path(user_path), encoding="utf-8") as fh:
+        return json.load(fh)
+
+
 def load(path):
-    m = json.load(open(path, encoding="utf-8"))["metrics"]
+    m = read_json(path)["metrics"]
     return {
         "p95": m["http_req_duration"]["p(95)"],
         "reqs": m["http_reqs"]["count"],

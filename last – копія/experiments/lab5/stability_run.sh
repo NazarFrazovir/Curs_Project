@@ -9,7 +9,7 @@ CG=/sys/fs/cgroup/cpu/lab5app
 # guard: жодного залишкового шуму + cool-down, щоб прогони не впливали один на одного
 pkill -x xz 2>/dev/null
 sleep 15
-if [ "$CPUS" != "none" ]; then
+if [[ "$CPUS" != "none" ]]; then
   echo $(python3 -c "print(int($CPUS*100000))") > $CG/cpu.cfs_quota_us   # те саме, що docker --cpus=$CPUS
 else
   echo -1 > $CG/cpu.cfs_quota_us
@@ -17,8 +17,8 @@ fi
 echo $APP_PID > $CG/cgroup.procs
 for t in $(ls /proc/$APP_PID/task); do echo $t > $CG/tasks 2>/dev/null; done
 NPIDS=""
-if [ "$NOISE" != "no" ]; then
-  N=2; [ "$NOISE" = "heavy" ] && N=4
+if [[ "$NOISE" != "no" ]]; then
+  N=2; [[ "$NOISE" = "heavy" ]] && N=4
   # сторонній процес: важка компресія логів на всіх ядрах
   for i in $(seq 1 $N); do ( while true; do xz -9e -T1 -c $W/expS/fake_app.log > /dev/null; done ) & NPIDS="$NPIDS $!"; done
 fi

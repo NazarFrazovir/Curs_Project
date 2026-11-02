@@ -16,7 +16,22 @@ Mutation Score (як у Stryker):
 """
 import argparse
 import json
+import os
 import sys
+
+
+def safe_path(user_path):
+    """Шлях лише всередині поточного каталогу проєкту (захист від path traversal)."""
+    base = os.path.realpath(os.getcwd())
+    path = os.path.realpath(os.path.join(base, user_path))
+    if os.path.commonpath([base, path]) != base:
+        raise SystemExit(f"Шлях поза каталогом проєкту: {user_path}")
+    return path
+
+
+def read_json(user_path):
+    with open(safe_path(user_path), encoding="utf-8") as fh:
+        return json.load(fh)
 
 
 def main():
@@ -27,10 +42,10 @@ def main():
     ap.add_argument("--min-mutation", type=float, default=65.0)
     a = ap.parse_args()
 
-    cov = json.load(open(a.coverage, encoding="utf-8"))["totals"]
+    cov = read_json(a.coverage)["totals"]
     line_cov = 100.0 * cov["covered_lines"] / cov["num_statements"] if cov["num_statements"] else 0.0
 
-    s = json.load(open(a.mutation, encoding="utf-8"))
+    s = read_json(a.mutation)
     detected = s["killed"] + s["timeout"]
     undetected = s["survived"] + s["no_tests"]
     mut = 100.0 * detected / (detected + undetected) if detected + undetected else 0.0
