@@ -1,0 +1,79 @@
+# ЛР5: збір метрик в ізольованому середовищі з жорсткими лімітами ресурсів.
+#
+# Статичні метрики:      docker compose -f docker-compose.quality.yml run --rm metrics
+# Навантажувальний тест: docker compose -f docker-compose.quality.yml up -d db web
+#                        docker compose -f docker-compose.quality.yml run --rm k6
+#
+# Чому ліміти саме такі (Stability Test, профіль ci, SLO p95 < 300 мс, медіана 3 прогонів):
+#   ізольовано                               p95 ≈ 76 мс   PASS
+#   + сторонній xz (2 процеси) на тій же машині  p95 ≈ 194 мс  PASS, але використано 65 % бюджету SLO
+#   web обмежено --cpus=0.5                   p95 ≈ 108 мс  PASS
+#   web обмежено --cpus=0.25                  p95 ≈ 474 мс  FAIL (3/3) — хоча код той самий
+# => застосунку гарантуємо фіксовані ресурси (і cpuset — окреме ядро),
+#    генератор навантаження k6 — окремі ядра, щоб він не «крав» CPU у сервісу.
+# Тротлінг перевіряйте після тесту: docker compose exec web cat /sys/fs/cgroup/cpu.stat
+#   (nr_throttled > 0 -> результат INVALID, див. scripts/loadtest_gate.py)
+
+x-limits: &pinned
+  restart: "no"
+  logging:
+    driver: json-file
+    options: { max-size: "10m" }
+
+services:
+  metrics:
+    <<: *pinned
+    build:
+      context: .
+      dockerfile: Dockerfile.quality
+    image: curs-project-quality:lab5
+    volumes:
+      - ./:/src:ro
+      - ./results:/out
+    cpus: "1.0"
+    mem_limit: 1g
+    memswap_limit: 1g           # без свопу: OOM видно одразу, а не як «повільний» скан
+
+  db:
+    <<: *pinned
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: wholesale_db
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    tmpfs: /var/lib/postgresql/data   # чиста БД на кожен прогін
+    cpuset: "0"
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d wholesale_db"]
+      interval: 2s
+      retries: 20
+
+  web:
+    <<: *pinned
+    build: .
+    environment:
+      SECRET_KEY: lab5-benchmark-only
+      DATABASE_URL: postgresql://app:app@db:5432/wholesale_db
+    ports: ["5050:5000"]
+    depends_on:
+      db: { condition: service_healthy }
+    cpuset: "1"                 # окреме ядро тільки для застосунку
+    cpus: "1.0"
+    mem_limit: 512m
+    memswap_limit: 512m
+
+  k6:
+    <<: *pinned
+    image: grafana/k6:0.54.0    # фіксована версія генератора навантаження
+    profiles: ["load"]
+    command: ["run", "-e", "PROFILE=ci", "-e", "BASE_URL=http://web:5000",
+              "--summary-export", "/out/k6_ci.json", "/load/balance.js"]
+    volumes:
+      - ./load:/load:ro
+      - ./results:/out
+    depends_on: [web]
+    cpuset: "2-3"               # генератор не конкурує з web за ядро
+    mem_limit: 512m

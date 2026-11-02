@@ -1,0 +1,18 @@
+# ЛР5 (Reliability): єдиний формат рядків у репозиторії незалежно від ОС розробника.
+# У сховищі завжди LF; Git сам нормалізує CRLF з Windows при коміті.
+# До ЛР5 у проєкті були змішані закінчення рядків (reports.py, частина sql/, templates/, static/js/ — CRLF).
+* text=auto eol=lf
+
+*.py   text eol=lf diff=python
+*.sql  text eol=lf
+*.html text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.sh   text eol=lf
+
+# бінарні файли не чіпаємо
+*.png binary
+*.jpg binary
+*.pyc binary

@@ -1,5 +1,4 @@
 -r requirements.txt
-pytest>=8.0
 pip-audit>=2.7
-radon>=6.0
-complexipy>=3.0
+# Інструменти метрик — лише з фіксованими версіями (ЛР5, Reliability Test)
+-r requirements-quality.txt
