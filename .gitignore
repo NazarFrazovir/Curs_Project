@@ -208,3 +208,6 @@ __marimo__/
 .sonar-token
 .DS_Store
 .scannerwork/
+
+# ЛР5: робоча папка mutmut
+mutants/
