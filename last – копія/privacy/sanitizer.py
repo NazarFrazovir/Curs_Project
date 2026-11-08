@@ -207,28 +207,32 @@ class RedactedObject:
 _SAFE_SCALARS = (bool, int, float, decimal.Decimal, _dt.date, _dt.time, _dt.timedelta, uuid.UUID)
 
 
+# ЛР6, Data-Driven Refactoring: усі умови classify_key винесено в довідник
+# «шаблон назви поля -> категорія». Порядок записів = пріоритет (dict зберігає порядок
+# вставки): секрети перевіряються першими, перше збігле правило визначає категорію.
+KEY_RULES = {
+    SECRET_KEY_RE: "forbidden",
+    ADDRESS_KEY_RE: "forbidden",
+    EMAIL_KEY_RE: "email",
+    PHONE_KEY_RE: "phone",
+    IP_KEY_RE: "ip",
+    NAME_KEY_RE: "name",
+    CARD_KEY_RE: "forbidden",
+    IBAN_KEY_RE: "forbidden",
+    PASSPORT_KEY_RE: "forbidden",
+    ID_CARD_KEY_RE: "forbidden",
+    TAX_ID_KEY_RE: "forbidden",
+    BIRTH_KEY_RE: "forbidden",
+    DOB_KEY_RE: "forbidden",
+    GEO_KEY_RE: "forbidden",
+    LATLON_KEY_RE: "forbidden",
+}
+_NO_RULE = (None, "allowed")
+
+
 def classify_key(key) -> str:
-    key = str(key)
-    if SECRET_KEY_RE.search(key) or ADDRESS_KEY_RE.search(key):
-        return "forbidden"
-    if EMAIL_KEY_RE.search(key):
-        return "email"
-    if PHONE_KEY_RE.search(key):
-        return "phone"
-    if IP_KEY_RE.search(key):
-        return "ip"
-    if NAME_KEY_RE.search(key):
-        return "name"
-    # ЛР6: 4 нові бізнес-правила, дописані монолітно за кресленням CFG
-    if CARD_KEY_RE.search(key) or IBAN_KEY_RE.search(key):
-        return "forbidden"
-    if PASSPORT_KEY_RE.search(key) or ID_CARD_KEY_RE.search(key) or TAX_ID_KEY_RE.search(key):
-        return "forbidden"
-    if BIRTH_KEY_RE.search(key) or DOB_KEY_RE.search(key):
-        return "forbidden"
-    if GEO_KEY_RE.search(key) or LATLON_KEY_RE.search(key):
-        return "forbidden"
-    return "allowed"
+    rule = next(filter(lambda item: item[0].search(str(key)), KEY_RULES.items()), _NO_RULE)
+    return rule[1]
 
 
 _MASKERS = {"email": mask_email, "phone": mask_phone, "ip": mask_ip, "name": mask_name}
