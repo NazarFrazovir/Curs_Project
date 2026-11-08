@@ -1,0 +1,6 @@
+# Cognitive Complexity файлу reports.py (LF) різними версіями complexipy, Python 3.11
+complexipy 1.2.0 (+click<8.2, інакше CLI падає): total=75  sql_console=14  _sanitize_select=9   overheads_add=5
+complexipy 3.0.0:                                total=75  sql_console=13  _sanitize_select=9   overheads_add=5
+complexipy 4.0.0:                                total=80  sql_console=13  _sanitize_select=11  overheads_add=6
+complexipy 8.3.0:                                total=78  sql_console=15  _sanitize_select=9   overheads_add=7
+# lizard 1.17.10 vs 1.24.3, увесь проєкт без tests/: NLOC 3190 vs 2919 (inventory.py 698 vs 579), CCN/функції однакові

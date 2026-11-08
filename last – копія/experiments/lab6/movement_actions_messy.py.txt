@@ -1,0 +1,25 @@
+
+
+def movement_actions(role, mtype, is_canceled):
+    """Дії над рядком журналу рухів: роль × тип руху × статус."""
+    if is_canceled is None:
+        return ()
+    if mtype not in ("IN", "OUT"):
+        return ()
+    if role == "Admin":
+        if is_canceled:
+            return ("restore",)
+        return ("edit", "cancel")
+    if role == "Operator":
+        if is_canceled:
+            if mtype == "IN":
+                return ("restore",)
+            return ()
+        if mtype == "OUT":
+            return ("cancel",)
+        return ("edit", "cancel")
+    if role == "Authorized":
+        if is_canceled and mtype == "OUT":
+            return ()
+        return ("view",)
+    return ()

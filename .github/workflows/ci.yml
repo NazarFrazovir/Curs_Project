@@ -77,6 +77,73 @@ jobs:
           name: pytest-report-${{ matrix.service }}
           path: ${{ matrix.path }}/pytest-report.xml
 
+  # ---------- 1b. ЛР5: метрики якості в ізольованому, відтворюваному середовищі ----------
+  quality-metrics:
+    name: Quality metrics (pinned tools, limited container)
+    runs-on: ubuntu-24.04          # фіксований образ раннера замість «плаваючого» ubuntu-latest
+    container:
+      image: python:3.11-slim-bookworm   # та сама версія, що в Dockerfile і Dockerfile.quality
+      # жорсткі ліміти: результати не залежать від того, скільки ресурсів «вільно» на раннері
+      options: --cpus 2 --memory 2g --memory-swap 2g
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: "1"
+      DATABASE_URL: ""             # тести без реальної БД
+      # Шлях передаємо через змінну й робимо cd у кожному кроці: у container-джобах раннер
+      # передає defaults.run.working-directory у `docker exec -w` без лапок, і назва
+      # з пробілами ("last – копія") ламає команду ("No such container: –").
+      APP_DIR: "last – копія"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pinned quality tools (lock-файл з хешами, лише wheel-пакети)
+        run: |
+          cd "$APP_DIR"
+          pip install --no-cache-dir --require-hashes --only-binary :all: -r requirements-quality.lock
+
+      - name: Text hygiene (UTF-8 без BOM, LF)
+        # невалідне кодування ламає radon/complexipy і «покращує» ruff — зупиняємо до збору метрик
+        run: |
+          cd "$APP_DIR"
+          python scripts/check_text_hygiene.py .
+
+      - name: Static metrics + gate (CCN, Cognitive)
+        # ratchet: ЛР6 опустила всі функції до CCN <= 10 (redact 24 -> 3, sql_console 19 -> 9,
+        # overheads_add 16 -> 5); Cognitive max 16 — privacy/consent.py::dispatch_marketing_outbox
+        run: |
+          cd "$APP_DIR"
+          python scripts/collect_metrics.py --out results/metrics.json --max-ccn 10 --max-cognitive 16
+
+      - name: Coverage (resilience, api)
+        run: |
+          cd "$APP_DIR"
+          coverage run --branch --source=resilience,api -m pytest -q tests/test_resilience.py tests/test_resilience_contract.py
+          coverage json -o results/coverage.json
+          coverage report
+
+      - name: Mutation testing (mutmut)
+        run: |
+          cd "$APP_DIR"
+          mutmut run --max-children 2
+          mutmut export-cicd-stats
+
+      - name: Balanced Quality Gate (Coverage AND Mutation Score)
+        run: |
+          cd "$APP_DIR"
+          python scripts/balanced_gate.py --coverage results/coverage.json \
+            --mutation mutants/mutmut-cicd-stats.json --min-coverage 80 --min-mutation 65
+
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-metrics
+          path: |
+            last – копія/results/metrics.json
+            last – копія/results/coverage.json
+            last – копія/mutants/mutmut-cicd-stats.json
+
   # ---------- 2. Образи: збірка + сканування, публікація лише на push ----------
   image:
     name: Image (${{ matrix.service }})

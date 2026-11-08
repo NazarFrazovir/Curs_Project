@@ -476,7 +476,7 @@ def _sanitize_select(sql: str) -> str:
 
     # заборонені ключові слова
     for tok in FORBIDDEN_TOKENS:
-        if re.search(rf'\b{tok}\b', low):
+        if re.search(rf'\b{re.escape(tok)}\b', low):
             raise ValueError(f'Заборонене слово у запиті: {tok.upper()}')
 
     # забороняємо SELECT ... INTO (створює таблицю)
@@ -516,58 +516,60 @@ Optional[str]):
     return wrapped, tuple(params), limit
 
 
+SQL_CONSOLE_EXAMPLE = ("SELECT id, movement_dt, mtype, product_id, qty, price "
+                       "FROM stock_movements ORDER BY movement_dt DESC")
+
+
+def _arg(name, default=None):
+    """GET-параметр без пробілів по краях; порожній -> default."""
+    return (request.args.get(name) or "").strip() or default
+
+
+def _run_console_query(sql_text, date_col, d1, d2, limit_raw):
+    """Виконує перевірений SELECT; помилка повертається текстом, а не винятком."""
+    result = {"headers": [], "rows": [], "limit": None, "error": None}
+    try:
+        safe_sql = _sanitize_select(sql_text)
+        final_sql, params, result["limit"] = _build_wrapped_query(safe_sql, date_col, d1, d2, limit_raw)
+        with get_conn() as conn, conn.cursor() as cur:
+            # контекст виконання
+            cur.execute("SET search_path TO app, public;")
+            cur.execute("SET LOCAL statement_timeout = 3000;")
+            cur.execute(final_sql, params)
+            result["rows"] = cur.fetchall()
+            result["headers"] = [d.name for d in cur.description]
+    except Exception as e:
+        result["error"] = str(e)
+    return result
+
+
 @bp.get("/sql")
 def sql_console():
-    role = session.get('user', {}).get('role')
-    if role not in ('Admin', 'Operator'):
+    if not _role('Admin', 'Operator'):
         flash('Доступ лише для оператора/адміністратора', 'error')
         return redirect(url_for('dashboard'))
 
     # вхідні параметри (форму робимо методом GET)
-    sql_text  = request.args.get('sql') or ""
-    date_col  = (request.args.get('date_col') or "").strip() or None
-    d1        = (request.args.get('d1') or "").strip() or None
-    d2        = (request.args.get('d2') or "").strip() or None
+    sql_text = request.args.get('sql', "")
+    date_col, d1, d2 = _arg('date_col'), _arg('d1'), _arg('d2')
     limit_raw = request.args.get('limit') or "200"
-    do_exec   = request.args.get('run') == '1' or bool(sql_text.strip())
 
-    error = None
-    headers = []
-    rows = []
-    limit = None
-
-    if do_exec and sql_text.strip():
-        try:
-            safe_sql = _sanitize_select(sql_text)
-            final_sql, params, limit = _build_wrapped_query(safe_sql, date_col, d1, d2, limit_raw)
-
-            with get_conn() as conn, conn.cursor() as cur:
-                # контекст виконання
-                cur.execute("SET search_path TO app, public;")
-                cur.execute("SET LOCAL statement_timeout = 3000;")
-                cur.execute(final_sql, params)
-                rows = cur.fetchall()
-                headers = [d.name for d in cur.description]
-
-            # CSV експорт
-            if request.args.get('format') == 'csv':
-                return _csv_response("sql_export.csv", headers, rows)
-
-        except Exception as e:
-            error = str(e)
-
-    # приклад за замовчуванням (підказка)
-    example = "SELECT id, movement_dt, mtype, product_id, qty, price FROM stock_movements ORDER BY movement_dt DESC"
+    result = {"headers": [], "rows": [], "limit": None, "error": None}
+    if sql_text.strip():
+        result = _run_console_query(sql_text, date_col, d1, d2, limit_raw)
+        # CSV експорт
+        if result["error"] is None and request.args.get('format') == 'csv':
+            return _csv_response("sql_export.csv", result["headers"], result["rows"])
 
     return render_template(
         "reports/sql_console.html",
-        sql_text=sql_text or example,
+        sql_text=sql_text or SQL_CONSOLE_EXAMPLE,
         date_col=date_col or "movement_dt",
         d1=d1, d2=d2,
-        limit=limit or limit_raw,
-        headers=headers,
-        rows=rows,
-        error=error
+        limit=result["limit"] or limit_raw,
+        headers=result["headers"],
+        rows=result["rows"],
+        error=result["error"],
     )
 
 
@@ -587,25 +589,28 @@ def overheads_add():
         flash("Доступ лише для Оператора/Адміністратора", "error")
         return redirect(url_for("reports.profitability"))
 
-    d1 = request.args.get("d1") or request.form.get("d1") or None
-    d2 = request.args.get("d2") or request.form.get("d2") or None
-    amount_raw = (request.form.get("amount") or "").strip()
+    d1, d2 = _period_param("d1"), _period_param("d2")
     note = (request.form.get("note") or "").strip() or None
     created_by = session.get("user", {}).get("login")
 
     try:
-        amount = float(amount_raw)
+        amount = float(request.form.get("amount", "").strip())
     except ValueError:
         flash("Невірна сума витрат", "error")
-        return redirect(url_for("reports.profitability", d1=d1 or "", d2=d2 or ""))
+        return redirect(url_for("reports.profitability", d1=d1, d2=d2))
 
     _exec("""
         INSERT INTO overheads(period_start, period_end, amount, note, created_by)
         VALUES (NULLIF(%s,'')::date, NULLIF(%s,'')::date, %s::numeric, %s, %s)
-    """, (d1 or "", d2 or "", amount, note, created_by))
+    """, (d1, d2, amount, note, created_by))
 
     flash("Витрати додано", "ok")
-    return redirect(url_for("reports.profitability", d1=d1 or "", d2=d2 or ""))
+    return redirect(url_for("reports.profitability", d1=d1, d2=d2))
+
+
+def _period_param(name):
+    """Межа періоду з URL або форми; відсутня -> '' (у SQL стає NULL через NULLIF)."""
+    return request.args.get(name) or request.form.get(name) or ""
 
 @bp.post("/analytics/overheads/<int:rid>/delete")
 def overheads_delete(rid):

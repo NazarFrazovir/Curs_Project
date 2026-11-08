@@ -29,11 +29,22 @@ const PROFILES = {
     ],
     pause: 0.1,
   },
+  // ЛР5 (Stability Test): фіксований еталонний профіль для CI — 10 клієнтів
+  // майже без пауз (~70 RPS). В ізольованому середовищі має стабільно давати PASS,
+  // тому будь-який FAIL під цим профілем — сигнал або регресії коду, або шуму інфраструктури.
+  ci: {
+    stages: [
+      { duration: '15s', target: 10 },
+      { duration: '1m', target: 10 },
+      { duration: '5s', target: 0 },
+    ],
+    pause: 0.1,
+  },
 };
 
 const profile = PROFILES[PROFILE];
 if (!profile) {
-  throw new Error(`Unknown PROFILE "${PROFILE}", use normal or stress`);
+  throw new Error(`Unknown PROFILE "${PROFILE}", use normal, stress or ci`);
 }
 
 export const options = {

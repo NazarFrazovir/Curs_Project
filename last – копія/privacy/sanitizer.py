@@ -37,6 +37,16 @@ IP_KEY_RE = re.compile(r"(^|_)(ip|ip_?addr(ess)?|remote_?addr|client_?ip)$", re.
 NAME_KEY_RE = re.compile(
     r"(^|_)(full_?name|first_?name|last_?name|name|login|user_?name)$", re.IGNORECASE
 )
+# FORBIDDEN (ЛР6, розширення правил): платіжні реквізити, документи, дата народження, геолокація
+CARD_KEY_RE = re.compile(r"card[_-]?(number|no|num)|(^|_)(pan|cvv|cvc)$", re.IGNORECASE)
+IBAN_KEY_RE = re.compile(r"iban|account[_-]?(number|no)|(^|_)swift$", re.IGNORECASE)
+PASSPORT_KEY_RE = re.compile(r"passport", re.IGNORECASE)
+ID_CARD_KEY_RE = re.compile(r"id[_-]?card|national[_-]?id", re.IGNORECASE)
+TAX_ID_KEY_RE = re.compile(r"tax[_-]?(id|number)|(^|_)(ipn|rnokpp)$", re.IGNORECASE)
+BIRTH_KEY_RE = re.compile(r"birth", re.IGNORECASE)
+DOB_KEY_RE = re.compile(r"(^|_)dob$", re.IGNORECASE)
+GEO_KEY_RE = re.compile(r"(^|_)(geo|location|coords?)$", re.IGNORECASE)
+LATLON_KEY_RE = re.compile(r"(^|_)(lat|lon|lng|latitude|longitude)$", re.IGNORECASE)
 # Усі інші поля (correlation_id, event, result, actor, subject, лічильники...) — ALLOWED.
 
 LOG_FIELD_POLICY = {
@@ -197,52 +207,87 @@ class RedactedObject:
 _SAFE_SCALARS = (bool, int, float, decimal.Decimal, _dt.date, _dt.time, _dt.timedelta, uuid.UUID)
 
 
+# ЛР6, Data-Driven Refactoring: усі умови classify_key винесено в довідник
+# «шаблон назви поля -> категорія». Порядок записів = пріоритет (dict зберігає порядок
+# вставки): секрети перевіряються першими, перше збігле правило визначає категорію.
+KEY_RULES = {
+    SECRET_KEY_RE: "forbidden",
+    ADDRESS_KEY_RE: "forbidden",
+    EMAIL_KEY_RE: "email",
+    PHONE_KEY_RE: "phone",
+    IP_KEY_RE: "ip",
+    NAME_KEY_RE: "name",
+    CARD_KEY_RE: "forbidden",
+    IBAN_KEY_RE: "forbidden",
+    PASSPORT_KEY_RE: "forbidden",
+    ID_CARD_KEY_RE: "forbidden",
+    TAX_ID_KEY_RE: "forbidden",
+    BIRTH_KEY_RE: "forbidden",
+    DOB_KEY_RE: "forbidden",
+    GEO_KEY_RE: "forbidden",
+    LATLON_KEY_RE: "forbidden",
+}
+_NO_RULE = (None, "allowed")
+
+
 def classify_key(key) -> str:
-    key = str(key)
-    if SECRET_KEY_RE.search(key) or ADDRESS_KEY_RE.search(key):
-        return "forbidden"
-    if EMAIL_KEY_RE.search(key):
-        return "email"
-    if PHONE_KEY_RE.search(key):
-        return "phone"
-    if IP_KEY_RE.search(key):
-        return "ip"
-    if NAME_KEY_RE.search(key):
-        return "name"
-    return "allowed"
+    rule = next(filter(lambda item: item[0].search(str(key)), KEY_RULES.items()), _NO_RULE)
+    return rule[1]
 
 
 _MASKERS = {"email": mask_email, "phone": mask_phone, "ip": mask_ip, "name": mask_name}
 
 
+_UNHANDLED = object()
+
+
+def _redact_by_key(value, key):
+    """Політика за назвою поля: [REDACTED], маска або _UNHANDLED (обробити за типом)."""
+    rule = classify_key(key)
+    if rule == "forbidden":
+        return REDACTED
+    if rule in _MASKERS and value is not None and not isinstance(value, (Mapping, list, tuple)):
+        return _MASKERS[rule](value)
+    return _UNHANDLED
+
+
+def _redact_sequence(value, depth):
+    items = [redact(v, None, depth + 1) for v in value]
+    return tuple(items) if isinstance(value, tuple) else items
+
+
+def _redact_dataclass(value, depth):
+    raw = {f.name: getattr(value, f.name) for f in dataclasses.fields(value)}
+    return RedactedObject(type(value).__name__, redact(raw, None, depth + 1))
+
+
+def _is_plain_object(value):
+    return hasattr(value, "__dict__") and not isinstance(value, type) and not callable(value)
+
+
+# ЛР6: ланцюг із 11 перевірок типу винесено в таблицю «умова -> обробник».
+# Порядок записів = пріоритет; останнє правило спрацьовує завжди.
+_TYPE_RULES = (
+    (lambda v, d: v is None or isinstance(v, _SAFE_SCALARS), lambda v, d: v),
+    (lambda v, d: isinstance(v, str), lambda v, d: sanitize_text(v)),
+    (lambda v, d: isinstance(v, (bytes, bytearray, memoryview)), lambda v, d: "[BINARY]"),
+    (lambda v, d: d >= MAX_DEPTH, lambda v, d: "[TRUNCATED]"),
+    (lambda v, d: isinstance(v, RedactedObject), lambda v, d: v),
+    (lambda v, d: isinstance(v, Mapping), lambda v, d: {k: redact(x, k, d + 1) for k, x in v.items()}),
+    (lambda v, d: isinstance(v, (list, tuple, set, frozenset)), _redact_sequence),
+    (lambda v, d: isinstance(v, BaseException), lambda v, d: sanitize_text(str(v))),
+    (lambda v, d: dataclasses.is_dataclass(v) and not isinstance(v, type), _redact_dataclass),
+    (lambda v, d: _is_plain_object(v),
+     lambda v, d: RedactedObject(type(v).__name__, redact(dict(vars(v)), None, d + 1))),
+    (lambda v, d: True, lambda v, d: sanitize_text(str(v))),
+)
+
+
 def redact(value, key=None, _depth: int = 0):
     """Рекурсивно знеособити значення. key — назва поля, якому належить value."""
     if key is not None:
-        rule = classify_key(key)
-        if rule == "forbidden":
-            return REDACTED
-        if rule in _MASKERS and value is not None and not isinstance(value, (Mapping, list, tuple)):
-            return _MASKERS[rule](value)
-    if value is None or isinstance(value, _SAFE_SCALARS):
-        return value
-    if isinstance(value, str):
-        return sanitize_text(value)
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return "[BINARY]"
-    if _depth >= MAX_DEPTH:
-        return "[TRUNCATED]"
-    if isinstance(value, RedactedObject):
-        return value
-    if isinstance(value, Mapping):
-        return {k: redact(v, k, _depth + 1) for k, v in value.items()}
-    if isinstance(value, (list, tuple, set, frozenset)):
-        items = [redact(v, None, _depth + 1) for v in value]
-        return tuple(items) if isinstance(value, tuple) else items
-    if isinstance(value, BaseException):
-        return sanitize_text(str(value))
-    if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        raw = {f.name: getattr(value, f.name) for f in dataclasses.fields(value)}
-        return RedactedObject(type(value).__name__, redact(raw, None, _depth + 1))
-    if hasattr(value, "__dict__") and not isinstance(value, type) and not callable(value):
-        return RedactedObject(type(value).__name__, redact(dict(vars(value)), None, _depth + 1))
-    return sanitize_text(str(value))
+        by_key = _redact_by_key(value, key)
+        if by_key is not _UNHANDLED:
+            return by_key
+    _, handler = next(filter(lambda rule: rule[0](value, _depth), _TYPE_RULES))
+    return handler(value, _depth)

@@ -1,0 +1,6 @@
+    resilience.x_call_with_retry__mutmut_13: survived
+    api.x__fallback__mutmut_5: survived
+    api.x__fallback__mutmut_36: survived
+    api.x__fallback__mutmut_37: survived
+    api.x__fallback__mutmut_59: survived
+    api.x__fallback__mutmut_60: survived

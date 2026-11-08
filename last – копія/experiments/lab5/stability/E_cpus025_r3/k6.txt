@@ -1,0 +1,25 @@
+
+     ✓ status is 200
+     ✓ body has items
+
+     checks.........................: 100.00% 5052 out of 5052
+     data_received..................: 26 MB   318 kB/s
+     data_sent......................: 230 kB  2.9 kB/s
+     http_req_blocked...............: avg=449.32µs min=67.96µs  med=286.74µs p(90)=686.51µs p(95)=1.05ms   p(99)=3.51ms   max=21.71ms 
+     http_req_connecting............: avg=334.02µs min=44.32µs  med=184.23µs p(90)=513.94µs p(95)=821.67µs p(99)=3.25ms   max=21.03ms 
+   ✗ http_req_duration..............: avg=176.25ms min=5.7ms    med=124.18ms p(90)=395.14ms p(95)=464.39ms p(99)=565.08ms max=686.1ms 
+       { expected_response:true }...: avg=176.25ms min=5.7ms    med=124.18ms p(90)=395.14ms p(95)=464.39ms p(99)=565.08ms max=686.1ms 
+   ✓ http_req_failed................: 0.00%   0 out of 2526
+     http_req_receiving.............: avg=6.39ms   min=48.12µs  med=255µs    p(90)=9.81ms   p(95)=64.77ms  p(99)=90.36ms  max=175.12ms
+     http_req_sending...............: avg=78.42µs  min=11.84µs  med=57.19µs  p(90)=121.21µs p(95)=168.25µs p(99)=423µs    max=4.5ms   
+     http_req_tls_handshaking.......: avg=0s       min=0s       med=0s       p(90)=0s       p(95)=0s       p(99)=0s       max=0s      
+     http_req_waiting...............: avg=169.78ms min=5.52ms   med=115.51ms p(90)=390.43ms p(95)=439.57ms p(99)=532.45ms max=685.25ms
+     http_reqs......................: 2526    31.555776/s
+     iteration_duration.............: avg=278.29ms min=106.46ms med=225.91ms p(90)=497.13ms p(95)=566.2ms  p(99)=668.9ms  max=787.35ms
+     iterations.....................: 2526    31.555776/s
+     vus............................: 1       min=1            max=10
+     vus_max........................: 10      min=10           max=10
+
+time="2026-11-01T20:33:25Z" level=error msg="thresholds on metrics 'http_req_duration' have been crossed"
+steal_ticks 130
+k6 exit code: 99

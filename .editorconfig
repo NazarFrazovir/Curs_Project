@@ -1,0 +1,13 @@
+# ЛР5: редактор (PyCharm/VS Code) одразу зберігає файли в UTF-8 без BOM з LF,
+# щоб сканери метрик отримували однаковий вхід на будь-якій ОС.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.py]
+indent_style = space
+indent_size = 4
