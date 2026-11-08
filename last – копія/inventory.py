@@ -491,8 +491,13 @@ def _validate_movement(m, exclude_id=None):
     if m['mtype'] != 'OUT':
         return None
     available = _available_qty(m['product_id'], exclude_id)
-    if available < float(m['qty']):
-        return f"Недостатньо залишку. Доступно: {available}, запитано: {m['qty']}"
+    # ЛР7 (FAIL): «оптимізація» — залишок після видатку рахуємо прямо в m['qty'],
+    # щоб показати його в повідомленні. Але m — спільний змінюваний словник,
+    # який далі йде в INSERT/UPDATE: у базу потрапляє залишок замість кількості.
+    requested = m['qty']
+    m['qty'] = float(available) - float(m['qty'])
+    if m['qty'] < 0:
+        return f"Недостатньо залишку. Доступно: {available}, запитано: {requested}"
     return None
 
 
