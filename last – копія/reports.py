@@ -476,7 +476,7 @@ def _sanitize_select(sql: str) -> str:
 
     # заборонені ключові слова
     for tok in FORBIDDEN_TOKENS:
-        if re.search(rf'\b{tok}\b', low):
+        if re.search(rf'\b{re.escape(tok)}\b', low):
             raise ValueError(f'Заборонене слово у запиті: {tok.upper()}')
 
     # забороняємо SELECT ... INTO (створює таблицю)
