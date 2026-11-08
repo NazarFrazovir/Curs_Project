@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
-# Блокує коміт, якщо у staged-змінах є секрети (ненульовий код виходу скасовує коміт).
+# Ланцюг pre-commit перевірок. Будь-який ненульовий код виходу скасовує коміт.
+#   1. ЛР6: складність коду (CC ≤ 10) у staged Python-файлах
+#   2. ЛР3: секрети у staged-змінах (gitleaks)
+HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(git rev-parse --show-toplevel)"
+
+# хук може бути встановлений копією в .git/hooks — тоді беремо валідатор із githooks/
+VALIDATOR="$HOOKS_DIR/pre-commit-complexity"
+[[ -x "$VALIDATOR" ]] || VALIDATOR="$ROOT/githooks/pre-commit-complexity"
+"$VALIDATOR" || exit 1
+
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "gitleaks не знайдено: brew install gitleaks" >&2
   exit 1

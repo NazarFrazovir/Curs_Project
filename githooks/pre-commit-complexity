@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# ЛР6: «воротар якості» — блокує коміт, якщо хоча б одна функція у staged Python-файлах
+# має цикломатичну складність CC > CC_LIMIT (за замовчуванням 10).
+#
+# Що перевіряється: саме ті версії файлів, що підуть у коміт (індекс Git після `git add`),
+# а не робоча копія. Інакше можна виправити файл на диску, не зробивши `git add`,
+# і хук пропустив би заплутаний код.
+#
+# Сумісний із bash 3.2 (macOS): без mapfile та асоціативних масивів.
+set -u
+
+CC_LIMIT="${CC_LIMIT:-10}"
+RED=$'\033[1;31m'; GREEN=$'\033[1;32m'; YELLOW=$'\033[1;33m'; RESET=$'\033[0m'
+ROOT="$(git rev-parse --show-toplevel)"
+
+# --- 1. Staged-файли (додані, змінені, перейменовані); -z — безпечно для пробілів і кирилиці
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+COUNT=0
+while IFS= read -r -d '' FILE; do
+  mkdir -p "$TMP/$(dirname "$FILE")"
+  git show ":$FILE" > "$TMP/$FILE"          # вміст з індексу, а не з диска
+  COUNT=$((COUNT + 1))
+done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.py')
+
+if [[ "$COUNT" -eq 0 ]]; then
+  echo "${GREEN}✔ pre-commit: Python-файлів у коміті немає — перевірка складності не потрібна${RESET}"
+  exit 0
+fi
+
+# --- 2. Сканер (потрібен лише коли в коміті є Python-код): lizard з віртуального оточення проєкту, інакше з PATH
+LIZARD=""
+for candidate in "$ROOT/.venv/bin/lizard" "$ROOT/last – копія/.venv/bin/lizard" "$(command -v lizard 2>/dev/null)"; do
+  if [[ -n "$candidate" && -x "$candidate" ]]; then LIZARD="$candidate"; break; fi
+done
+if [[ -z "$LIZARD" ]]; then
+  echo "${RED}✖ pre-commit: lizard не знайдено.${RESET} Встановіть: pip install lizard==1.24.3" >&2
+  exit 1   # fail-closed: без сканера коміт не пропускаємо
+fi
+
+echo "▶ pre-commit: перевіряю складність $COUNT staged Python-файл(ів), ліміт CC ≤ $CC_LIMIT ($("$LIZARD" --version 2>/dev/null | head -1))"
+
+# --- 3. Сканування: -w друкує лише порушення, код виходу 1 = є порушення
+REPORT="$(cd "$TMP" && "$LIZARD" -l python -C "$CC_LIMIT" -w . 2>&1)"
+STATUS=$?
+
+# --- 4. Рішення
+if [[ $STATUS -ne 0 ]] || grep -q "warning:" <<< "$REPORT"; then
+  echo "${RED}✖ КОМІТ ЗАБЛОКОВАНО: перевищено архітектурний ліміт складності (CC > $CC_LIMIT)${RESET}" >&2
+  # формат lizard: ./шлях:рядок: warning: функція has N NLOC, X CCN, ...
+  sed -E 's#^\./##; s#^([^:]+):([0-9]+): warning: ([^ ]+) has ([0-9]+) NLOC, ([0-9]+) CCN.*#  \1:\2  \3()  CC = \5#' \
+    <<< "$REPORT" | sed "s/^/${RED}/; s/\$/${RESET}/" >&2
+  echo "${YELLOW}  Порада: винесіть розгалуження в таблицю даних (lookup table) або розбийте функцію.${RESET}" >&2
+  exit 1
+fi
+
+echo "${GREEN}✔ pre-commit: складність у нормі (усі функції CC ≤ $CC_LIMIT)${RESET}"
+exit 0
