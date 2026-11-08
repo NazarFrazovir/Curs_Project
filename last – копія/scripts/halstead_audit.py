@@ -32,7 +32,7 @@ import os
 import sys
 import tokenize
 
-DEFAULT_SOURCES = ["api.py", "app.py", "auth.py", "dashboard.py", "db.py", "inventory.py",
+DEFAULT_SOURCES = ["api.py", "app.py", "auth.py", "dashboard.py", "db.py", "inventory.py", "movement.py",
                    "queries.py", "reports.py", "resilience.py", "privacy"]
 FSTRING_START = getattr(tokenize, "FSTRING_START", None)   # Python 3.12+
 FSTRING_END = getattr(tokenize, "FSTRING_END", None)

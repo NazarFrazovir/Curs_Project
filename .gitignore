@@ -211,3 +211,6 @@ __marimo__/
 
 # ЛР5: робоча папка mutmut
 mutants/
+
+# ЛР7: звіти hotspots (генеруються в CI)
+last – копія/artifacts/

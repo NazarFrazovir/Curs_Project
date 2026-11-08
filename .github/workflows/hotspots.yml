@@ -1,0 +1,82 @@
+# ЛР7: хмарний збір метрик і синергетична матриця критичних зон (Hotspots).
+# На кожен push і pull request у Docker-контейнері раннера:
+#   1) встановлює CLI-сканери (lizard, radon) із lock-файлу з хешами;
+#   2) сканує весь застосунок -> машиночитаний звіт lizard (CSV);
+#   3) рахує Code Churn через git log за 90 днів;
+#   4) зводить складність × мінливість у матрицю Hotspots (JSON + Markdown);
+#   5) публікує звіти як артефакт збірки і показує матрицю в Summary запуску.
+name: Hotspots
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hotspots:
+    name: Complexity × Churn hotspots
+    runs-on: ubuntu-24.04
+    container:
+      image: python:3.11-slim-bookworm
+      options: --cpus 2 --memory 2g
+    timeout-minutes: 10
+    env:
+      APP_DIR: "last – копія"     # шлях із пробілами: cd у кожному кроці (див. ЛР5)
+      PYTHONUTF8: "1"
+      CHURN_DAYS: "90"
+    steps:
+      - name: Install git (потрібен для історії комітів у контейнері)
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends git ca-certificates >/dev/null
+          git --version
+
+      - name: Checkout (повна історія для Code Churn)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Trust workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install CLI scanners (lizard, radon) from lock file
+        run: |
+          cd "$APP_DIR"
+          pip install --no-cache-dir --require-hashes --only-binary :all: -r requirements-quality.lock
+          lizard --version
+
+      - name: Static scan -> lizard CSV
+        run: |
+          cd "$APP_DIR"
+          mkdir -p artifacts
+          lizard -l python --csv api.py app.py auth.py dashboard.py db.py inventory.py movement.py \
+            queries.py reports.py resilience.py privacy > artifacts/lizard.csv
+          echo "функцій у звіті: $(wc -l < artifacts/lizard.csv)"
+
+      - name: Code Churn (git log, останні 90 днів)
+        run: |
+          cd "$APP_DIR"
+          git -c core.quotepath=false log --since="${CHURN_DAYS}.days" --format=format: --name-only \
+            | grep -Ev '^$' | sort | uniq -c | sort -nr | tee artifacts/churn.txt
+
+      - name: Hotspots matrix (складність × мінливість)
+        run: |
+          cd "$APP_DIR"
+          python scripts/hotspots.py --days "$CHURN_DAYS" --lizard-csv artifacts/lizard.csv \
+            --json artifacts/hotspots.json --markdown artifacts/hotspots.md
+          cat artifacts/hotspots.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: hotspots-report
+          path: |
+            last – копія/artifacts/lizard.csv
+            last – копія/artifacts/churn.txt
+            last – копія/artifacts/hotspots.json
+            last – копія/artifacts/hotspots.md
+          if-no-files-found: error
+          retention-days: 30

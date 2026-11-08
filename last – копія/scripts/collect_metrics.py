@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tempfile
 
-SOURCES = ["api.py", "app.py", "auth.py", "dashboard.py", "db.py", "inventory.py",
+SOURCES = ["api.py", "app.py", "auth.py", "dashboard.py", "db.py", "inventory.py", "movement.py",
            "queries.py", "reports.py", "resilience.py", "privacy"]
 RUFF_RULES = "E,F,W,B,SIM"
 BIN_DIR = os.path.dirname(sys.executable)   # інструменти з того ж оточення, не з довільного PATH
