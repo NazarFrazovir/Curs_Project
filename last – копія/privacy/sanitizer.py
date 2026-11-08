@@ -37,6 +37,16 @@ IP_KEY_RE = re.compile(r"(^|_)(ip|ip_?addr(ess)?|remote_?addr|client_?ip)$", re.
 NAME_KEY_RE = re.compile(
     r"(^|_)(full_?name|first_?name|last_?name|name|login|user_?name)$", re.IGNORECASE
 )
+# FORBIDDEN (ЛР6, розширення правил): платіжні реквізити, документи, дата народження, геолокація
+CARD_KEY_RE = re.compile(r"card[_-]?(number|no|num)|(^|_)(pan|cvv|cvc)$", re.IGNORECASE)
+IBAN_KEY_RE = re.compile(r"iban|account[_-]?(number|no)|(^|_)swift$", re.IGNORECASE)
+PASSPORT_KEY_RE = re.compile(r"passport", re.IGNORECASE)
+ID_CARD_KEY_RE = re.compile(r"id[_-]?card|national[_-]?id", re.IGNORECASE)
+TAX_ID_KEY_RE = re.compile(r"tax[_-]?(id|number)|(^|_)(ipn|rnokpp)$", re.IGNORECASE)
+BIRTH_KEY_RE = re.compile(r"birth", re.IGNORECASE)
+DOB_KEY_RE = re.compile(r"(^|_)dob$", re.IGNORECASE)
+GEO_KEY_RE = re.compile(r"(^|_)(geo|location|coords?)$", re.IGNORECASE)
+LATLON_KEY_RE = re.compile(r"(^|_)(lat|lon|lng|latitude|longitude)$", re.IGNORECASE)
 # Усі інші поля (correlation_id, event, result, actor, subject, лічильники...) — ALLOWED.
 
 LOG_FIELD_POLICY = {
@@ -209,6 +219,15 @@ def classify_key(key) -> str:
         return "ip"
     if NAME_KEY_RE.search(key):
         return "name"
+    # ЛР6: 4 нові бізнес-правила, дописані монолітно за кресленням CFG
+    if CARD_KEY_RE.search(key) or IBAN_KEY_RE.search(key):
+        return "forbidden"
+    if PASSPORT_KEY_RE.search(key) or ID_CARD_KEY_RE.search(key) or TAX_ID_KEY_RE.search(key):
+        return "forbidden"
+    if BIRTH_KEY_RE.search(key) or DOB_KEY_RE.search(key):
+        return "forbidden"
+    if GEO_KEY_RE.search(key) or LATLON_KEY_RE.search(key):
+        return "forbidden"
     return "allowed"
 
 

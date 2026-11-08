@@ -15,6 +15,11 @@ CASES = [
     ("phone", "phone"), ("mobile", "phone"), ("user_tel", "phone"),
     ("ip", "ip"), ("remote_addr", "ip"),
     ("full_name", "name"), ("login", "name"),
+    # ЛР6: нові правила — повне приховування
+    ("card_number", "forbidden"), ("cvv", "forbidden"), ("iban", "forbidden"),
+    ("account_no", "forbidden"), ("passport", "forbidden"), ("id_card", "forbidden"),
+    ("tax_id", "forbidden"), ("rnokpp", "forbidden"), ("birth_date", "forbidden"),
+    ("dob", "forbidden"), ("geo", "forbidden"), ("lat", "forbidden"), ("longitude", "forbidden"),
     # усе інше дозволено
     ("correlation_id", "allowed"), ("event", "allowed"), ("qty", "allowed"),
 ]
