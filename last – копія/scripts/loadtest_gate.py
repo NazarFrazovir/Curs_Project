@@ -44,7 +44,7 @@ def load(path):
     }
 
 
-def main():
+def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("summaries", nargs="+")
     ap.add_argument("--slo-p95", type=float, default=300.0)
@@ -52,30 +52,48 @@ def main():
     ap.add_argument("--max-spread", type=float, default=0.5)
     ap.add_argument("--throttled-periods", type=int, default=0,
                     help="приріст nr_throttled контейнера web за час тесту")
-    a = ap.parse_args()
+    return ap.parse_args()
 
-    runs = [load(p) for p in a.summaries]
+
+def summarize(runs):
     p95s = [r["p95"] for r in runs]
     med = statistics.median(p95s)
-    spread = (max(p95s) - min(p95s)) / med if med else 0.0
-    err = sum(r["failed"] for r in runs) / sum(r["reqs"] for r in runs)
+    return {"n": len(runs), "p95s": p95s, "median": med,
+            "spread": (max(p95s) - min(p95s)) / med if med else 0.0,
+            "error_rate": sum(r["failed"] for r in runs) / sum(r["reqs"] for r in runs)}
 
-    print("p95 по прогонах, мс:", ", ".join(f"{x:.1f}" for x in p95s))
-    print(f"median p95 = {med:.1f} мс | spread = {spread:.0%} | error rate = {err:.3%}")
 
-    if len(runs) < 3:
-        print("INVALID: потрібно щонайменше 3 прогони")
+# ЛР6: умови недійсності виміру — таблиця «умова -> пояснення» замість ланцюга if
+INVALID_RULES = (
+    (lambda s, a: s["n"] < 3,
+     lambda s, a: "потрібно щонайменше 3 прогони"),
+    (lambda s, a: a.throttled_periods > 0,
+     lambda s, a: f"контейнер застосунку тротлився {a.throttled_periods} періодів CFS — "
+                  "результат визначає ліміт --cpus, а не код"),
+    (lambda s, a: s["spread"] > a.max_spread,
+     lambda s, a: f"розкид {s['spread']:.0%} > {a.max_spread:.0%} — середовище зашумлене, "
+                  "перезапустіть на ізольованому раннері"),
+)
+
+
+def invalid_reason(s, a):
+    rule = next(filter(lambda r: r[0](s, a), INVALID_RULES), None)
+    return rule[1](s, a) if rule else None
+
+
+def main():
+    a = parse_args()
+    s = summarize([load(p) for p in a.summaries])
+    print("p95 по прогонах, мс:", ", ".join(f"{x:.1f}" for x in s["p95s"]))
+    print(f"median p95 = {s['median']:.1f} мс | spread = {s['spread']:.0%} | "
+          f"error rate = {s['error_rate']:.3%}")
+
+    reason = invalid_reason(s, a)
+    if reason:
+        print(f"INVALID: {reason}")
         return 3
-    if a.throttled_periods > 0:
-        print(f"INVALID: контейнер застосунку тротлився {a.throttled_periods} періодів CFS — "
-              "результат визначає ліміт --cpus, а не код")
-        return 3
-    if spread > a.max_spread:
-        print(f"INVALID: розкид {spread:.0%} > {a.max_spread:.0%} — середовище зашумлене, "
-              "перезапустіть на ізольованому раннері")
-        return 3
-    ok = med < a.slo_p95 and err < a.max_error_rate
-    print(f"Gate: (median p95 {med:.1f} < {a.slo_p95:.0f}) AND (errors {err:.3%} < "
+    ok = s["median"] < a.slo_p95 and s["error_rate"] < a.max_error_rate
+    print(f"Gate: (median p95 {s['median']:.1f} < {a.slo_p95:.0f}) AND (errors {s['error_rate']:.3%} < "
           f"{a.max_error_rate:.0%}) -> {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1
 

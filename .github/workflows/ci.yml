@@ -109,11 +109,11 @@ jobs:
           python scripts/check_text_hygiene.py .
 
       - name: Static metrics + gate (CCN, Cognitive)
-        # ratchet: пороги = поточний baseline (privacy/sanitizer.py::redact — CCN 24, Cognitive 28);
-        # після рефакторингу redact() знижуємо до 15 / 15
+        # ratchet: ЛР6 опустила всі функції до CCN <= 10 (redact 24 -> 3, sql_console 19 -> 9,
+        # overheads_add 16 -> 5); Cognitive max 16 — privacy/consent.py::dispatch_marketing_outbox
         run: |
           cd "$APP_DIR"
-          python scripts/collect_metrics.py --out results/metrics.json --max-ccn 25 --max-cognitive 30
+          python scripts/collect_metrics.py --out results/metrics.json --max-ccn 10 --max-cognitive 16
 
       - name: Coverage (resilience, api)
         run: |

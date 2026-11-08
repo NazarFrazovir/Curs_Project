@@ -238,34 +238,56 @@ def classify_key(key) -> str:
 _MASKERS = {"email": mask_email, "phone": mask_phone, "ip": mask_ip, "name": mask_name}
 
 
+_UNHANDLED = object()
+
+
+def _redact_by_key(value, key):
+    """Політика за назвою поля: [REDACTED], маска або _UNHANDLED (обробити за типом)."""
+    rule = classify_key(key)
+    if rule == "forbidden":
+        return REDACTED
+    if rule in _MASKERS and value is not None and not isinstance(value, (Mapping, list, tuple)):
+        return _MASKERS[rule](value)
+    return _UNHANDLED
+
+
+def _redact_sequence(value, depth):
+    items = [redact(v, None, depth + 1) for v in value]
+    return tuple(items) if isinstance(value, tuple) else items
+
+
+def _redact_dataclass(value, depth):
+    raw = {f.name: getattr(value, f.name) for f in dataclasses.fields(value)}
+    return RedactedObject(type(value).__name__, redact(raw, None, depth + 1))
+
+
+def _is_plain_object(value):
+    return hasattr(value, "__dict__") and not isinstance(value, type) and not callable(value)
+
+
+# ЛР6: ланцюг із 11 перевірок типу винесено в таблицю «умова -> обробник».
+# Порядок записів = пріоритет; останнє правило спрацьовує завжди.
+_TYPE_RULES = (
+    (lambda v, d: v is None or isinstance(v, _SAFE_SCALARS), lambda v, d: v),
+    (lambda v, d: isinstance(v, str), lambda v, d: sanitize_text(v)),
+    (lambda v, d: isinstance(v, (bytes, bytearray, memoryview)), lambda v, d: "[BINARY]"),
+    (lambda v, d: d >= MAX_DEPTH, lambda v, d: "[TRUNCATED]"),
+    (lambda v, d: isinstance(v, RedactedObject), lambda v, d: v),
+    (lambda v, d: isinstance(v, Mapping), lambda v, d: {k: redact(x, k, d + 1) for k, x in v.items()}),
+    (lambda v, d: isinstance(v, (list, tuple, set, frozenset)), _redact_sequence),
+    (lambda v, d: isinstance(v, BaseException), lambda v, d: sanitize_text(str(v))),
+    (lambda v, d: dataclasses.is_dataclass(v) and not isinstance(v, type), _redact_dataclass),
+    (lambda v, d: _is_plain_object(v),
+     lambda v, d: RedactedObject(type(v).__name__, redact(dict(vars(v)), None, d + 1))),
+    (lambda v, d: True, lambda v, d: sanitize_text(str(v))),
+)
+
+
 def redact(value, key=None, _depth: int = 0):
     """Рекурсивно знеособити значення. key — назва поля, якому належить value."""
     if key is not None:
-        rule = classify_key(key)
-        if rule == "forbidden":
-            return REDACTED
-        if rule in _MASKERS and value is not None and not isinstance(value, (Mapping, list, tuple)):
-            return _MASKERS[rule](value)
-    if value is None or isinstance(value, _SAFE_SCALARS):
-        return value
-    if isinstance(value, str):
-        return sanitize_text(value)
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return "[BINARY]"
-    if _depth >= MAX_DEPTH:
-        return "[TRUNCATED]"
-    if isinstance(value, RedactedObject):
-        return value
-    if isinstance(value, Mapping):
-        return {k: redact(v, k, _depth + 1) for k, v in value.items()}
-    if isinstance(value, (list, tuple, set, frozenset)):
-        items = [redact(v, None, _depth + 1) for v in value]
-        return tuple(items) if isinstance(value, tuple) else items
-    if isinstance(value, BaseException):
-        return sanitize_text(str(value))
-    if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        raw = {f.name: getattr(value, f.name) for f in dataclasses.fields(value)}
-        return RedactedObject(type(value).__name__, redact(raw, None, _depth + 1))
-    if hasattr(value, "__dict__") and not isinstance(value, type) and not callable(value):
-        return RedactedObject(type(value).__name__, redact(dict(vars(value)), None, _depth + 1))
-    return sanitize_text(str(value))
+        by_key = _redact_by_key(value, key)
+        if by_key is not _UNHANDLED:
+            return by_key
+    _, handler = next(filter(lambda rule: rule[0](value, _depth), _TYPE_RULES))
+    return handler(value, _depth)

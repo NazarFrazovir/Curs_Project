@@ -34,8 +34,6 @@ import tokenize
 
 DEFAULT_SOURCES = ["api.py", "app.py", "auth.py", "dashboard.py", "db.py", "inventory.py",
                    "queries.py", "reports.py", "resilience.py", "privacy"]
-SKIP = {tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT,
-        tokenize.ENCODING, tokenize.ENDMARKER}
 FSTRING_START = getattr(tokenize, "FSTRING_START", None)   # Python 3.12+
 FSTRING_END = getattr(tokenize, "FSTRING_END", None)
 CONSTANT_WORDS = {"True", "False", "None"}   # ключові слова-значення -> операнди
@@ -72,37 +70,45 @@ def docstring_starts(source):
     return starts
 
 
+OPERATOR, OPERAND = "operator", "operand"
+# роль токена за його типом; NAME вирішується окремо (ключове слово чи ідентифікатор)
+KIND_BY_TYPE = {tokenize.OP: OPERATOR, tokenize.NUMBER: OPERAND, tokenize.STRING: OPERAND}
+
+
+def merge_fstrings(tokens):
+    """У Python 3.12+ f-рядок розбивається на частини — збираємо його назад в один STRING,
+    щоб результат не залежав від версії інтерпретатора (урок ЛР5)."""
+    depth, parts, start = 0, [], None
+    for tok in tokens:
+        if tok.type == FSTRING_START:
+            depth += 1
+            start = start or tok.start
+        if not depth:
+            yield tok
+            continue
+        parts.append(tok.string)
+        depth -= tok.type == FSTRING_END
+        if not depth:
+            yield tokenize.TokenInfo(tokenize.STRING, "".join(parts), start, tok.end, tok.line)
+            parts, start = [], None
+
+
+def token_kind(tok, docs):
+    if tok.type == tokenize.NAME:
+        is_operator = keyword.iskeyword(tok.string) and tok.string not in CONSTANT_WORDS
+        return OPERATOR if is_operator else OPERAND
+    if tok.start in docs:
+        return None  # docstring — документація, не логіка
+    return KIND_BY_TYPE.get(tok.type)  # коментарі, відступи, переводи рядків -> None
+
+
 def lex(source):
     """Повертає (оператори, операнди) — списки токенів у порядку появи."""
-    operators, operands = [], []
     docs = docstring_starts(source)
-    fstring_depth, fstring_text = 0, []
-    for tok in tokenize.generate_tokens(io.StringIO(source).readline):
-        # f-рядок у Python 3.12+ розбивається на частини — збираємо назад в один операнд,
-        # щоб результат не залежав від версії інтерпретатора (урок ЛР5)
-        if FSTRING_START is not None and tok.type == FSTRING_START:
-            fstring_depth += 1
-        if fstring_depth:
-            fstring_text.append(tok.string)
-            if tok.type == FSTRING_END:
-                fstring_depth -= 1
-                if not fstring_depth:
-                    operands.append("".join(fstring_text))
-                    fstring_text = []
-            continue
-        if tok.type in SKIP:
-            continue
-        if tok.type == tokenize.STRING:
-            if tok.start not in docs:
-                operands.append(tok.string)
-        elif tok.type == tokenize.NAME:
-            is_operator = keyword.iskeyword(tok.string) and tok.string not in CONSTANT_WORDS
-            (operators if is_operator else operands).append(tok.string)
-        elif tok.type == tokenize.NUMBER:
-            operands.append(tok.string)
-        elif tok.type == tokenize.OP:
-            operators.append(tok.string)
-    return operators, operands
+    found = {OPERATOR: [], OPERAND: [], None: []}
+    for tok in merge_fstrings(tokenize.generate_tokens(io.StringIO(source).readline)):
+        found[token_kind(tok, docs)].append(tok.string)
+    return found[OPERATOR], found[OPERAND]
 
 
 def halstead(operators, operands):

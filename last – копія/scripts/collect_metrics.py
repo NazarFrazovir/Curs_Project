@@ -7,7 +7,7 @@
   3. Набір правил ruff фіксований (--isolated), не залежить від локальних конфігів.
 
 Використання:
-  python scripts/collect_metrics.py --out results/metrics.json [--max-ccn 25] [--max-cognitive 30]
+  python scripts/collect_metrics.py --out results/metrics.json [--max-ccn 10] [--max-cognitive 16]
 """
 import argparse
 import json
@@ -94,8 +94,8 @@ def ruff_metrics(m, errors):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="results/metrics.json")
-    ap.add_argument("--max-ccn", type=int, default=25)
-    ap.add_argument("--max-cognitive", type=int, default=30)
+    ap.add_argument("--max-ccn", type=int, default=10)
+    ap.add_argument("--max-cognitive", type=int, default=16)
     args = ap.parse_args()
     out_path = safe_path(args.out)
 
