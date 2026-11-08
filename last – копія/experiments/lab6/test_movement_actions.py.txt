@@ -1,0 +1,20 @@
+"""ЛР6: матриця прав журналу рухів (роль × тип руху × статус)."""
+import pytest
+
+from inventory import movement_actions
+
+
+@pytest.mark.parametrize("role,mtype,canceled,expected", [
+    ("Admin", "IN", False, ("edit", "cancel")),
+    ("Admin", "OUT", True, ("restore",)),
+    ("Operator", "OUT", False, ("cancel",)),       # видаток оператор лише скасовує
+    ("Operator", "IN", True, ("restore",)),
+    ("Operator", "OUT", True, ()),                 # відновити видаток може лише адмін
+    ("Authorized", "IN", True, ("view",)),
+    ("Authorized", "OUT", True, ()),
+    ("Guest", "IN", False, ()),
+    ("Admin", "XX", False, ()),                    # невідомий тип руху
+    ("Admin", "IN", None, ()),                     # невизначений статус
+])
+def test_movement_actions(role, mtype, canceled, expected):
+    assert movement_actions(role, mtype, canceled) == expected

@@ -1,0 +1,21 @@
+
+
+# ЛР6: матриця прав журналу рухів як таблиця даних (роль, тип руху, скасовано) -> дії.
+# Комбінації, яких немає в таблиці (Guest, невідомий тип, статус None), -> дій немає.
+MOVEMENT_ACTIONS = {
+    ("Admin", "IN", False): ("edit", "cancel"),
+    ("Admin", "OUT", False): ("edit", "cancel"),
+    ("Admin", "IN", True): ("restore",),
+    ("Admin", "OUT", True): ("restore",),
+    ("Operator", "IN", False): ("edit", "cancel"),
+    ("Operator", "OUT", False): ("cancel",),
+    ("Operator", "IN", True): ("restore",),
+    ("Authorized", "IN", False): ("view",),
+    ("Authorized", "OUT", False): ("view",),
+    ("Authorized", "IN", True): ("view",),
+}
+
+
+def movement_actions(role, mtype, is_canceled):
+    """Дії над рядком журналу рухів: роль × тип руху × статус."""
+    return MOVEMENT_ACTIONS.get((role, mtype, is_canceled), ())
