@@ -21,12 +21,14 @@ class Document:
     def __init__(self, source):
         self._source = source
 
-    def render(self, rid):
-        """Template Method: (ім'я файлу, байти) або None, якщо руху немає."""
+    def render(self, rid, locale="uk"):
+        """Template Method: (ім'я файлу, байти) або None, якщо руху немає.
+        ЛР8 (FAIL): нова вимога бухгалтерії — числа за локаллю (uk: десяткова кома),
+        тому базовий клас тепер передає locale у body/lines."""
         movement = self._source.find(rid)
         if movement is None:
             return None
-        return self.filename(rid), self.encode(self.body(movement))
+        return self.filename(rid), self.encode(self.body(movement, locale=locale))
 
     def filename(self, rid):
         return f"{self.prefix()}_{rid}.{self.extension}"
@@ -37,11 +39,11 @@ class Document:
     def title(self):
         return "Документ руху товару"
 
-    def body(self, movement):
-        return "\n".join([self.title(), *self.lines(movement)])
+    def body(self, movement, *, locale):
+        return "\n".join([self.title(), *self.lines(movement, locale=locale)])
 
-    def lines(self, movement):
-        return [f"{name}: {getattr(movement, name)}" for name in FIELDS]
+    def lines(self, movement, *, locale):
+        return [f"{name}: {localized(getattr(movement, name), locale)}" for name in FIELDS]
 
     def encode(self, text):
         return text.encode("utf-8")
@@ -85,6 +87,11 @@ class CsvWaybill(TabularDocument):
 
     def encode(self, text):                          # перевизначення Document.encode
         return text.encode("utf-8-sig")
+
+
+def localized(value, locale):
+    text = "" if value is None else str(value)
+    return text.replace(".", ",") if locale == "uk" else text
 
 
 def total(movement):
