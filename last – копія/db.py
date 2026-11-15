@@ -29,3 +29,25 @@ def get_conn():
 
 def release_conn(exception=None):
     pass
+
+
+# ---------- Helpers (раніше жили в inventory.py) ----------
+def fetchall(query, params=()):
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SET search_path TO app, public;")
+        cur.execute(query, params)
+        return cur.fetchall()
+
+
+def fetchone(query, params=()):
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SET search_path TO app, public;")
+        cur.execute(query, params)
+        return cur.fetchone()
+
+
+def execute(query, params=()):
+    with get_conn() as conn, conn.cursor() as cur:
+        cur.execute("SET search_path TO app, public;")
+        cur.execute(query, params)
+        conn.commit()

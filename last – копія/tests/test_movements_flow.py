@@ -8,7 +8,7 @@ from decimal import Decimal
 
 import pytest
 
-import inventory
+import db as db_module
 
 FORM = {"mtype": "OUT", "movement_dt": "", "product_id": "7", "qty": "30", "price": "12.50",
         "supplier_id": "3", "customer_id": "9", "agreement_id": ""}
@@ -17,9 +17,9 @@ FORM = {"mtype": "OUT", "movement_dt": "", "product_id": "7", "qty": "30", "pric
 @pytest.fixture
 def db(monkeypatch):
     state = {"available": Decimal("100"), "rows": [(False,)], "executed": []}
-    monkeypatch.setattr(inventory, "fetchone", lambda q, p=(): (state["available"],))
-    monkeypatch.setattr(inventory, "fetchall", lambda q, p=(): state["rows"])
-    monkeypatch.setattr(inventory, "execute", lambda q, p=(): state["executed"].append((q, p)))
+    monkeypatch.setattr(db_module, "fetchone", lambda q, p=(): state.get("row") or (state["available"],))
+    monkeypatch.setattr(db_module, "fetchall", lambda q, p=(): state["rows"])
+    monkeypatch.setattr(db_module, "execute", lambda q, p=(): state["executed"].append((q, p)))
     return state
 
 
@@ -112,3 +112,24 @@ def test_update_denies_guest(client, db):
     login(client, "Guest")
     client.post("/movements/42/update", data=FORM)
     assert db["executed"] == []
+
+
+# ---------------- ЛР8: аудит і накладна ----------------
+
+def test_add_writes_audit_event(client, db, caplog):
+    login(client)
+    with caplog.at_level("INFO", logger="warehouse"):
+        client.post("/movements/add", data=FORM)
+    event = next(r.getMessage() for r in caplog.records if r.name == "warehouse")
+    assert '"action": "movement.add"' in event and '"actor": "tester"' in event
+    assert '"qty": "30"' in event
+
+
+def test_waybill_csv(client, db):
+    login(client)
+    db["row"] = ("2026-11-01 10:00:00", "OUT", 7, None, 9, None, Decimal("30"), Decimal("12.50"))
+    resp = client.get("/movements/42/waybill.csv")
+    assert resp.headers["Content-Disposition"] == "attachment; filename=waybill_42.csv"
+    text = resp.data.decode("utf-8-sig")
+    assert text.splitlines()[0] == "Поле,Значення"
+    assert "qty,30" in text and "price,12.50" in text and text.rstrip().endswith("total,375.00")

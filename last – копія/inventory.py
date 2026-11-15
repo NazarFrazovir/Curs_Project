@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
-from db import get_conn
-from movement import Movement
+from db import execute, fetchall, fetchone
+from warehouse_service import WarehouseService
 import csv
 import io
 from urllib.parse import urlencode
@@ -12,25 +12,6 @@ bp = Blueprint('inv', __name__)
 def require_role(*roles):
     role = session.get('user',{}).get('role')
     return role in roles
-
-# ---------- Helpers ----------
-def fetchall(query, params=()):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO app, public;")
-        cur.execute(query, params)
-        return cur.fetchall()
-
-def fetchone(query, params=()):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO app, public;")
-        cur.execute(query, params)
-        return cur.fetchone()
-
-def execute(query, params=()):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO app, public;")
-        cur.execute(query, params)
-        conn.commit()
 
 def log_archive(entity, eid, action, reason=None):
     who = (session.get('user') or {}).get('login') or 'system'
@@ -434,63 +415,15 @@ def movements_list():
 
 # ---------- Movements: спільна логіка ----------
 
-def _back(msg):
-    flash(msg, 'error')
-    return redirect(url_for('inv.movements_list'))
-
-
-def _available_qty(product_id, exclude_id=None):
-    row = fetchone("""
-        SELECT COALESCE(SUM(CASE WHEN mtype='IN' THEN qty ELSE -qty END), 0)
-        FROM stock_movements
-        WHERE product_id=%s AND is_canceled=false
-          AND (%s IS NULL OR id <> %s)
-    """, (product_id, exclude_id, exclude_id))
-    return row[0] if row else 0
-
-
-def _validate_movement(movement, exclude_id=None):
-    """Повертає текст помилки або None. Рух не змінюється: Movement незмінний."""
-    error = movement.qty_error() or movement.type_error()
-    if error or not movement.is_outgoing:
-        return error
-    return movement.shortage_error(_available_qty(movement.product_id, exclude_id))
-
-
-def _edit_error(rid):
-    """Чи можна редагувати рух: існує і не скасований."""
-    rows = fetchall("SELECT is_canceled FROM stock_movements WHERE id=%s", (rid,))
-    if not rows:
-        return 'Рух не знайдено'
-    return 'Скасований рух редагувати не можна' if rows[0][0] else None
-
-
-INSERT_MOVEMENT_SQL = """
-  INSERT INTO stock_movements(movement_dt, mtype, product_id, supplier_id,
-                              customer_id, agreement_id, qty, price)
-  VALUES (COALESCE(%s::timestamptz, now()), %s, %s, %s, %s, %s, %s, %s)
-"""
-
-UPDATE_MOVEMENT_SQL = """
-    UPDATE stock_movements
-       SET movement_dt = COALESCE(%s::timestamptz, movement_dt),
-           mtype=%s, product_id=%s, supplier_id=%s, customer_id=%s,
-           agreement_id=%s, qty=%s, price=%s
-     WHERE id=%s
-"""
-
-
 @bp.post('/movements/add')
 def movements_add():
-    if not require_role('Admin', 'Operator'):
-        return _back('Доступ лише для оператора/адміністратора')
-    movement = Movement.from_form(request.form)
-    error = _validate_movement(movement)
-    if error:
-        return _back(error)
-    execute(INSERT_MOVEMENT_SQL, movement.sql_params())
-    flash('Рух додано', 'ok')
+    WarehouseService().add_movement()
     return redirect(url_for('inv.movements_list'))
+
+
+@bp.get('/movements/<int:rid>/waybill.csv')
+def movements_waybill(rid):
+    return WarehouseService().waybill(rid)
 
 @bp.post('/movements/<int:rid>/cancel')
 def movements_cancel(rid):
@@ -705,14 +638,7 @@ def movements_edit(rid):
 
 @bp.post('/movements/<int:rid>/update')
 def movements_update(rid):
-    if not require_role('Admin', 'Operator'):
-        return _back('Редагувати може лише оператор/адміністратор')
-    movement = Movement.from_form(request.form)
-    error = _edit_error(rid) or _validate_movement(movement, exclude_id=rid)
-    if error:
-        return _back(error)
-    execute(UPDATE_MOVEMENT_SQL, (*movement.sql_params(), rid))
-    flash('Зміни збережено', 'ok')
+    WarehouseService().update_movement(rid)
     return redirect(url_for('inv.movements_list'))
 
 
