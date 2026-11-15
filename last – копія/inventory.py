@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
 from db import execute, fetchall, fetchone
-from warehouse_service import WarehouseService
+from movement import Movement
+import warehouse
 import csv
 import io
 from urllib.parse import urlencode
@@ -415,15 +416,32 @@ def movements_list():
 
 # ---------- Movements: спільна логіка ----------
 
+def _done(error, success):
+    """Flash-повідомлення за результатом сценарію і повернення до журналу рухів."""
+    flash(error or success, 'error' if error else 'ok')
+    return redirect(url_for('inv.movements_list'))
+
+
+def _actor():
+    return (session.get('user') or {}).get('login')
+
+
 @bp.post('/movements/add')
 def movements_add():
-    WarehouseService().add_movement()
-    return redirect(url_for('inv.movements_list'))
+    if not require_role('Admin', 'Operator'):
+        return _done('Доступ лише для оператора/адміністратора', None)
+    error = warehouse.movement_service().add(Movement.from_form(request.form), _actor())
+    return _done(error, 'Рух додано')
 
 
 @bp.get('/movements/<int:rid>/waybill.csv')
 def movements_waybill(rid):
-    return WarehouseService().waybill(rid)
+    document = warehouse.waybill_document().render(rid)
+    if document is None:
+        return Response("Рух не знайдено", status=404)
+    filename, payload = document
+    return Response(payload, headers={"Content-Type": "text/csv; charset=utf-8",
+                                      "Content-Disposition": f"attachment; filename={filename}"})
 
 @bp.post('/movements/<int:rid>/cancel')
 def movements_cancel(rid):
@@ -638,8 +656,10 @@ def movements_edit(rid):
 
 @bp.post('/movements/<int:rid>/update')
 def movements_update(rid):
-    WarehouseService().update_movement(rid)
-    return redirect(url_for('inv.movements_list'))
+    if not require_role('Admin', 'Operator'):
+        return _done('Редагувати може лише оператор/адміністратор', None)
+    error = warehouse.movement_service().update(rid, Movement.from_form(request.form), _actor())
+    return _done(error, 'Зміни збережено')
 
 
 

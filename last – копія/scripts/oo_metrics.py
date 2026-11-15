@@ -45,23 +45,33 @@ from radon.complexity import cc_visit
 
 from halstead_audit import python_files, safe_path
 
-# увесь код застосунку: модулі в корені (крім скрипта ініціалізації БД) + пакет privacy
-SOURCES = sorted(f for f in os.listdir(".") if f.endswith(".py") and f != "setup_db.py") + ["privacy"]
+# увесь код застосунку: модулі в корені (крім скрипта ініціалізації БД) + пакети (privacy, warehouse)
+SOURCES = sorted(f for f in os.listdir(".") if f.endswith(".py") and f != "setup_db.py") + \
+    sorted(d for d in os.listdir(".") if os.path.isfile(os.path.join(d, "__init__.py")) and d != "tests")
 BUILTINS = set(dir(builtins)) | {"self", "cls"}
 CONSTRUCTORS = {"__init__", "__post_init__", "__new__"}
 
 
 # ---------------------------------------------------------------- розбір файлів
 
-def import_table(tree):
+def _absolute(node, package):
+    """Абсолютне ім'я модуля для `from X import ...`, у т.ч. відносного (`from .x import`)."""
+    if not node.level:
+        return node.module
+    parts = package.split(".") if package else []
+    base = parts[:len(parts) - (node.level - 1)]
+    return ".".join(base + ([node.module] if node.module else []))
+
+
+def import_table(tree, package=""):
     """Ім'я в коді -> компонент, з яким воно зв'язує (модуль або модуль.символ)."""
     table = {}
     for node in tree.body:
         if isinstance(node, ast.Import):
             table.update({(a.asname or a.name).split(".")[0]: a.name for a in node.names})
         elif isinstance(node, ast.ImportFrom):
-            prefix = "." * node.level + (node.module or "")
-            table.update({a.asname or a.name: f"{prefix}.{a.name}".lstrip(".") for a in node.names})
+            module = _absolute(node, package)
+            table.update({a.asname or a.name: f"{module}.{a.name}".lstrip(".") for a in node.names})
     return table
 
 
@@ -141,7 +151,8 @@ def load_units(paths):
         with open(path, encoding="utf-8") as fh:
             source = fh.read()
         tree = ast.parse(source)
-        imports = import_table(tree)
+        package = os.path.dirname(rel).replace(os.sep, ".")
+        imports = import_table(tree, package)
         cc = {f.fullname: f.complexity for f in cc_visit(source) if hasattr(f, "fullname")}
         classes = [n for n in tree.body if isinstance(n, ast.ClassDef)]
         for unit in [class_unit(rel, c, imports) for c in classes] + [module_unit(rel, tree, imports)]:
