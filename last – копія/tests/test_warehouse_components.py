@@ -60,6 +60,7 @@ def make_service(**kwargs):
     (store.SqlMovementStore(), contracts.MovementSource),
     (validator.MovementValidator(FakeStore()), contracts.MovementRules),
     (audit.RedactingAuditTrail(), contracts.AuditSink),
+    (waybill.CsvTable(), contracts.TableFormat),
 ])
 def test_implementations_satisfy_contracts(obj, contract):
     assert isinstance(obj, contract)
@@ -124,3 +125,29 @@ def test_row_mapping_lives_only_in_store(module):
     # формат рядка БД (as_db_row) знає лише SqlMovementStore — інші класи від нього не залежать
     assert "as_db_row" not in inspect.getsource(module)
     assert "as_db_row" in inspect.getsource(store)
+
+
+# ---------- Завд.3: композиція замість успадкування ----------
+
+def test_waybill_has_no_inheritance():
+    # DIT = 1: між CsvWaybill і object немає жодного предка
+    assert waybill.CsvWaybill.__mro__ == (waybill.CsvWaybill, object)
+    assert waybill.CsvTable.__mro__ == (waybill.CsvTable, object)
+
+
+def test_locale_is_a_swappable_component():
+    # вимога з FAIL-коміту виконується підстановкою іншого форматера — CsvWaybill не змінюється
+    _, payload = waybill.CsvWaybill(FakeStore(stored=MOVEMENT), waybill.CsvTable(locale="uk")).render(5)
+    text = payload.decode("utf-8-sig")
+    assert "price;12,50" in text and text.rstrip().endswith("total;375,00")
+
+
+def test_waybill_delegates_formatting():
+    class RecordingTable:
+        def render(self, header, rows):
+            self.args = (header, rows)
+            return b"x"
+
+    table = RecordingTable()
+    assert waybill.CsvWaybill(FakeStore(stored=MOVEMENT), table).render(5) == ("waybill_5.csv", b"x")
+    assert table.args[0] == ("Поле", "Значення") and table.args[1][-1] == ("total", Decimal("375.00"))

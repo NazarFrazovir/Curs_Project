@@ -48,3 +48,10 @@ class AuditSink(Protocol):
 
     def record(self, action: str, movement: Movement, actor: Optional[str],
                rid: Optional[int] = None) -> None: ...
+
+
+@runtime_checkable
+class TableFormat(Protocol):
+    """Форматування таблиці документа (CSV, локаль тощо)."""
+
+    def render(self, header, rows) -> bytes: ...
