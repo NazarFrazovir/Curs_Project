@@ -19,10 +19,10 @@ def test_fields_cannot_be_overwritten():
 
 def test_validation_does_not_change_the_movement():
     movement = Movement.from_form(FORM)
-    snapshot = movement.sql_params()
+    snapshot = movement.as_db_row()
     assert movement.shortage_error(Decimal("100")) is None
     assert movement.shortage_error(Decimal("10")) == "Недостатньо залишку. Доступно: 10, запитано: 30"
-    assert movement.sql_params() == snapshot
+    assert movement.as_db_row() == snapshot
 
 
 def test_from_form_builds_new_object_and_keeps_form_intact():
@@ -42,8 +42,8 @@ def test_value_semantics():
     assert Movement.from_form(FORM) == Movement.from_form(dict(FORM))
 
 
-def test_sql_params_order():
-    assert Movement.from_form(FORM).sql_params() == (None, "OUT", "7", None, "9", None, "30", "12.50")
+def test_db_row_order():
+    assert Movement.from_form(FORM).as_db_row() == (None, "OUT", "7", None, "9", None, "30", "12.50")
 
 
 @pytest.mark.parametrize("qty,error", [("30", None), ("abc", "Невірна кількість"), (None, "Невірна кількість"),

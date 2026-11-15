@@ -68,7 +68,9 @@ class Movement:
             return f"Недостатньо залишку. Доступно: {available}, запитано: {self.qty}"
         return None
 
-    def sql_params(self) -> tuple:
-        """Значення для INSERT/UPDATE stock_movements у порядку колонок."""
+    def as_db_row(self) -> tuple:
+        """Значення для INSERT/UPDATE stock_movements у порядку колонок.
+        ЛР8: перейменовано з sql_params() — модель не повинна знати про SQL-параметри,
+        вона лише віддає рядок даних у порядку колонок таблиці."""
         return (self.movement_dt, self.mtype, self.product_id, self.supplier_id,
                 self.customer_id, self.agreement_id, self.qty, self.price)
