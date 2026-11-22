@@ -1,0 +1,51 @@
+digraph UC {
+rankdir=LR; graph [fontname="DejaVu Sans", nodesep=0.25, ranksep=1.2, bgcolor=white];
+node [fontname="DejaVu Sans", fontsize=11]; edge [arrowhead=none, color="#555555"];
+a1 [shape=box, style="rounded,filled", fillcolor="#fff4d6", label="🧍 Закупівельник
+(людина, Web GUI)
+складний, 3"];
+a2 [shape=box, style="rounded,filled", fillcolor="#fff4d6", label="🧍 REST API-клієнт
+(HTTP + токен)
+середній, 2"];
+a3 [shape=box, style="rounded,filled", fillcolor="#fff4d6", label="🧍 Плагін постачальника /
+CLI-скрипт імпорту
+простий, 1"];
+subgraph cluster_sys { label="InvenTree · company: каталог постачальників\n(Company, ManufacturerPart, SupplierPart, SupplierPriceBreak)"; style=rounded; color="#2b6cb0"; fontsize=12;
+u1 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC1 Зареєструвати / змінити компанію"];
+u2 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC2 Переглянути компанії
+зі статистикою"];
+u3 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC3 Додати деталь виробника (MPN)"];
+u4 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC4 Додати / змінити деталь
+постачальника (SKU)"];
+u5 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC5 Керувати ціновими порогами"];
+u6 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC6 Розрахувати ціну
+за кількістю"];
+u7 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC7 Оновити наявність
+у постачальника"];
+u8 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC8 Переглянути деталі постачальника
+(склад, замовлено)"];
+u9 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC9 Експортувати каталог
+(CSV/XLSX)"];
+u10 [shape=ellipse, style=filled, fillcolor="#e8f1fb", label="UC10 Масово видалити деталі"];
+}
+a1 -> u1;
+a1 -> u2;
+a1 -> u3;
+a1 -> u4;
+a1 -> u5;
+a1 -> u6;
+a1 -> u8;
+a1 -> u9;
+a1 -> u10;
+a2 -> u1;
+a2 -> u2;
+a2 -> u4;
+a2 -> u5;
+a2 -> u8;
+a2 -> u9;
+a2 -> u10;
+a3 -> u3;
+a3 -> u7;
+u4 -> u3 [style=dashed, arrowhead=vee, label="«include»", fontsize=9, constraint=false];
+u6 -> u5 [style=dashed, arrowhead=vee, label="«include»", fontsize=9, constraint=false];
+}
