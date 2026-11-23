@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "curs-project.dbName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "curs-project.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  type: ClusterIP             # БД доступна лише всередині кластера
+  selector:
+    {{- include "curs-project.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+  ports:
+    - name: pg
+      port: {{ .Values.database.port }}
+      targetPort: pg

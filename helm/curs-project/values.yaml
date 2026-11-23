@@ -1,0 +1,96 @@
+# Значення за замовчуванням відповідають середовищу розробки (dev).
+# Для prod використовуйте: -f values-prod.yaml (див. helm/README.md).
+
+nameOverride: ""
+fullnameOverride: ""
+
+# --- Образ застосунку ---
+image:
+  repository: ghcr.io/nazarfrazovir/curs_project/web
+  tag: "1.0.0"          # якщо порожньо — береться appVersion з Chart.yaml
+  pullPolicy: IfNotPresent
+
+# --- Веб-застосунок (Flask) ---
+web:
+  replicaCount: 2
+  containerPort: 5000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  probes:
+    liveness:
+      path: /healthz        # процес живий, БД не перевіряється
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      failureThreshold: 3
+    readiness:
+      path: /readyz         # 200 лише коли відповідає БД
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 3
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# --- Service застосунку ---
+service:
+  type: NodePort            # у dev: доступ з хоста через minikube service
+  port: 80
+  nodePort: ""              # порожньо = автоматично (дозволяє встановити чарт двічі)
+
+# --- Ingress (необов'язковий) ---
+ingress:
+  enabled: false
+  className: nginx
+  host: curs.local
+  path: /
+  pathType: Prefix
+  annotations: {}
+
+# --- PostgreSQL ---
+database:
+  replicaCount: 1         # одна репліка: том ReadWriteOnce, кластеризації PostgreSQL немає
+  name: wholesale_db
+  user: postgres
+  port: 5432
+  image:
+    repository: postgres
+    tag: 16-alpine
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  persistence:            # необов'язковий PVC; без нього використовується emptyDir
+    enabled: true
+    size: 1Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+
+# --- Нечутливі параметри застосунку (ConfigMap) ---
+config:
+  DB_CONNECT_TIMEOUT: "2"
+  DB_RETRY_ATTEMPTS: "3"
+  DB_RETRY_BASE_DELAY: "0.1"
+  DB_RETRY_MAX_DELAY: "1.0"
+  LOG_LEVEL: INFO
+  LOG_FORMAT: text
+
+# --- Чутливі параметри (Secret) ---
+# Навчальні значення для dev. Не використовуйте їх поза лабораторною:
+# у реальному середовищі передавайте --set secrets.postgresPassword=... --set secrets.secretKey=...
+secrets:
+  postgresPassword: lab-only-db-password
+  secretKey: lab-only-flask-secret-key
+
+# --- Хуки Helm ---
+hooks:
+  preUpgrade:
+    enabled: true           # Job, що перед оновленням перевіряє доступність БД

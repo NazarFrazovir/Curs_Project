@@ -1,0 +1,38 @@
+# Середовище prod: більше реплік і ресурсів, інша версія образу, доступ через Ingress.
+# Паролі тут не зберігаються. У реальному середовищі передайте їх так:
+#   --set secrets.postgresPassword=... --set secrets.secretKey=...
+# (значення за замовчуванням з values.yaml придатні лише для лабораторної).
+#
+# Свідомо НЕ змінюються: secrets (пароль БД вже записано в том), database.persistence.size
+# (PVC не можна зменшити/змінити на живому релізі) і service.type, щоб перехід dev -> prod
+# через helm upgrade проходив без помилок.
+#
+# helm install prod ./helm/curs-project -n curs-prod --create-namespace -f helm/curs-project/values-prod.yaml
+image:
+  tag: "1.1.0"
+
+web:
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  host: curs-prod.local
+
+database:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+config:
+  LOG_LEVEL: WARNING

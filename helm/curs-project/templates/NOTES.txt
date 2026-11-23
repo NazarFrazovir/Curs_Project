@@ -1,0 +1,19 @@
+Реліз {{ .Release.Name }} встановлено в namespace {{ .Release.Namespace }} (ревізія {{ .Release.Revision }}).
+
+Стан об'єктів:
+  kubectl -n {{ .Release.Namespace }} get pods,deploy,svc
+
+Як відкрити застосунок:
+{{- if .Values.ingress.enabled }}
+  1. Додайте в /etc/hosts рядок:  $(minikube ip) {{ .Values.ingress.host }}
+     (з драйвером docker на macOS: запустіть `minikube tunnel` і вкажіть 127.0.0.1)
+  2. Відкрийте http://{{ .Values.ingress.host }}{{ .Values.ingress.path }}
+{{- else if eq .Values.service.type "NodePort" }}
+  minikube service {{ include "curs-project.webName" . }} -n {{ .Release.Namespace }}
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "curs-project.webName" . }} 8080:{{ .Values.service.port }}
+  Потім відкрийте http://localhost:8080
+{{- end }}
+
+Перевірка релізу:
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}

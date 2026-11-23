@@ -1,0 +1,19 @@
+{{- if .Values.database.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "curs-project.dbPvcName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "curs-project.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  accessModes:
+    - {{ .Values.database.persistence.accessMode }}
+  {{- with .Values.database.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.database.persistence.size }}
+{{- end }}

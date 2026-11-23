@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "curs-project.webName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "curs-project.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.web.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.web.rollingUpdate.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "curs-project.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        {{- include "curs-project.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+      annotations:
+        # зміна ConfigMap або Secret перезапускає поди під час helm upgrade
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}"
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          command: ["sh", "-c", "until pg_isready -h {{ include "curs-project.dbName" . }} -p {{ .Values.database.port }}; do echo waiting for postgres; sleep 2; done"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      containers:
+        - name: web
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.containerPort }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "curs-project.fullname" . }}      # DB_*, LOG_*, POSTGRES_*
+            - secretRef:
+                name: {{ include "curs-project.fullname" . }}      # SECRET_KEY, DATABASE_URL, POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.web.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.web.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.web.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.web.probes.liveness.failureThreshold }}
