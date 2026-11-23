@@ -35,7 +35,7 @@ flowchart LR
 
 ## 2. Контейнери і порядок запуску
 
-Порядок запуску задано через `depends_on` у `docker-compose.yml`: **`db` (healthy) → `toxiproxy` → `web`**.
+Порядок запуску задано через `depends_on` у `docker-compose.yml`: **`db` (healthy) → `toxiproxy` (started) → `web`**. `web` чекає **і** на `db: service_healthy` напряму, **і** на `toxiproxy: service_started`. Готовим `web` вважається, коли його healthcheck (`/api/health`) повертає 200.
 
 ### db
 * Образ `postgres:16-alpine`, порт `5433:5432`, volume `pg_data:/var/lib/postgresql/data`.
@@ -51,7 +51,8 @@ flowchart LR
 ### web
 * Збирається з `Dockerfile` (`python:3.11-slim`, `pip install -r requirements.txt`), команда `python app.py`, порт `5050:5000`.
 * `DATABASE_URL` вказує на **toxiproxy**, а не на `db` напряму.
-* Компоненти SDD: [`app.py`](sdd.md#3-опис-компонентів), [`auth`](sdd.md#auth), [`inventory`](sdd.md#inventory), [`warehouse`](sdd.md#warehouse), [`reports`](sdd.md#reports), [`privacy`](sdd.md#privacy), [`dashboard`](sdd.md#dashboard).
+* Healthcheck: `python -c urllib.request.urlopen('http://localhost:5000/api/health')` кожні 10 с, timeout 3 с, 5 спроб, `start_period` 10 с. Стан видно в `docker compose ps` (`healthy` / `unhealthy`).
+* Компоненти SDD: [`app.py`](sdd.md#3-опис-компонентів), [`auth`](sdd.md#auth), [`inventory`](sdd.md#inventory), [`warehouse`](sdd.md#warehouse), [`reports`](sdd.md#reports), [`privacy`](sdd.md#privacy), [`dashboard`](sdd.md#dashboard), [`alerts`](sdd.md#alerts).
 
 Допоміжні compose-файли:
 * `docker-compose.quality.yml` — ізольоване вимірювання метрик і k6 з лімітами CPU/пам'яті (ЛР5);
@@ -72,6 +73,7 @@ flowchart LR
 | `DB_RETRY_ATTEMPTS` | `resilience.py` | `3` | `3` | `3` | |
 | `DB_RETRY_BASE_DELAY` | `resilience.py` | `0.1` | `0.1` | `0.1` | секунди, експоненційний backoff |
 | `DB_RETRY_MAX_DELAY` | `resilience.py` | `1.0` | `1.0` | `1.0` | секунди |
+| `STOCK_ALERT_THRESHOLD` | `alerts.py` | `10` | `10` | за потребою бізнесу | поріг для `/api/stock-alerts` без параметра `below` |
 | `SECRET_KEY` | `app.py` (сесії Flask) | будь-який | `dev_secret` за замовчуванням | **секрет** | |
 | `FLASK_DEBUG` | `app.py` | `1` | — | **не задавати** | |
 | `LOG_LEVEL` | `privacy/logging_setup.py` | `INFO` | `INFO` | `INFO` | |
@@ -118,6 +120,8 @@ flowchart LR
 
 **Моніторинг**
 * `GET /api/balance`: поле `degraded` і `source` (`db` / `cache`) показують стан зв'язку з БД; 503 + `Retry-After` — БД недоступна і кешу немає.
+* `GET /api/health`: 200 `{"status":"ok","db":"up"}` або 503. Використовується healthcheck-ом `web`; придатний для зовнішнього uptime-монітора.
+* `GET /api/stock-alerts`: бізнес-моніторинг товарів, що закінчуються.
 * Healthcheck `db` (`pg_isready`) і `docker compose ps`.
 * Логи `web` (`docker compose logs web`): у production `LOG_FORMAT=json`, PII маскується (`privacy/logging_setup.py`), рядки `FALLBACK /api/balance` сигналізують про деградацію.
 

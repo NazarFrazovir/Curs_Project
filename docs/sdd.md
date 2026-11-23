@@ -50,13 +50,13 @@ C4Container
   System_Ext(client, "API-клієнт", "JSON")
 
   System_Boundary(sys, "Wholesale") {
-    Container(web, "web", "Python 3.11, Flask 3, Jinja2", "Модульний моноліт: blueprints auth, inv, reports, api, privacy; домен warehouse/")
+    Container(web, "web", "Python 3.11, Flask 3, Jinja2", "Модульний моноліт: blueprints auth, inv, reports, api, alerts, privacy; домен warehouse/")
     Container(proxy, "toxiproxy", "Shopify Toxiproxy 2.9", "TCP-проксі до БД для Fault Injection (ЛР resilience)")
     ContainerDb(db, "db", "PostgreSQL 16", "Схема app: довідники, рух товару, користувачі, згоди, аудит")
   }
 
   Rel(staff, web, "сторінки й форми", "HTTP :5050")
-  Rel(client, web, "/api/balance, /api/users/...", "HTTP JSON")
+  Rel(client, web, "/api/balance, /api/stock-alerts, /api/health, /api/users/...", "HTTP JSON")
   Rel(web, proxy, "SQL через psycopg2 pool", "TCP :6432")
   Rel(proxy, db, "проксує", "TCP :5432")
 ```
@@ -72,6 +72,7 @@ flowchart LR
     inv["inventory.py<br/>blueprint inv"]
     rep["reports.py<br/>blueprint reports /analytics"]
     api["api.py<br/>blueprint api /api"]
+    alr["alerts.py<br/>blueprint alerts /api"]
     prv["privacy/<br/>blueprint privacy /api"]
     dash["dashboard.py + queries.py"]
     wh["warehouse/<br/>MovementService, SqlMovementStore,<br/>MovementValidator, RedactingAuditTrail, CsvWaybill"]
@@ -85,6 +86,8 @@ flowchart LR
   wh --> res
   api --> res
   api --> dbm
+  alr --> dbm
+  alr --> res
   rep --> dbm
   auth --> dbm
   dash --> dbm
@@ -105,6 +108,7 @@ flowchart LR
 | <a id="movement"></a>**`movement.py`** | Value Object `Movement` (frozen dataclass): нормалізація форми, `as_db_row()` | — | [`warehouse/`](#warehouse), [`inventory.py`](#inventory) | — |
 | <a id="reports"></a>**`reports.py`** (blueprint `reports`, `/analytics`) | 11 аналітичних звітів, SQL-консоль (лише SELECT), накладні витрати | `db.py` | [`db.py`](#db) | [ISD `web`](isd.md#web) |
 | <a id="api"></a>**`api.py`** (blueprint `api`, `/api`) | JSON-залишки `/api/balance` з Retry і Fallback на stale-кеш (graceful degradation) | `resilience.py`, `db.py` | [`resilience.py`](#resilience), [`db.py`](#db) | [ISD `web`](isd.md#web), [ISD `toxiproxy`](isd.md#toxiproxy) |
+| <a id="alerts"></a>**`alerts.py`** (blueprint `alerts`, `/api`) | Сповіщення про низькі залишки `/api/stock-alerts` (поріг `below` або `STOCK_ALERT_THRESHOLD`) і перевірка живості `/api/health` (healthcheck контейнера) | `db.py` (`fetchall`, `fetchone`), `resilience.TRANSIENT_ERRORS` | [`db.py`](#db); представлення `stock_balance` ([§4](#4-модель-даних)) | [ISD `web` healthcheck](isd.md#web), [ISD §6](isd.md#6-моніторинг-резервне-копіювання-rtorpo) |
 | <a id="privacy"></a>**`privacy/`** (blueprint `privacy`, `/api`) | ЛР4: безпечне логування (маскування PII), експорт персональних даних, анонімізація, згоди (Consent Policy Gate), аудит | `db.py`, logging | [`db.py`](#db); описано детально в [`PRIVACY.md`](../last%20–%20копія/PRIVACY.md) | [ISD `web`](isd.md#web), [ISD §3 змінні `LOG_*`](isd.md#3-змінні-оточення-без-секретів) |
 | <a id="dashboard"></a>**`dashboard.py`, `queries.py`** | Головна сторінка `/`: KPI, останні рухи; глобальні змінні шаблонів | `db.py` | [`db.py`](#db) | [ISD `web`](isd.md#web) |
 | <a id="resilience"></a>**`resilience.py`** | `call_with_retry`: експоненційний backoff, `TRANSIENT_ERRORS` | змінні `DB_RETRY_*` | [`api.py`](#api), [`warehouse/`](#warehouse) | [ISD §3](isd.md#3-змінні-оточення-без-секретів) |
@@ -220,7 +224,7 @@ erDiagram
 | `suppliers`, `customers`, `products`, `agreements` | 00, 02 | довідники з м'яким видаленням (`is_active`, `archived_*`) |
 | `stock_movements` | 00, 03 | журнал руху товару; скасування замість видалення |
 | `archive_history` | 02 | хто, коли і чому архівував чи відновлював запис |
-| `stock_balance` (VIEW) | 04 | залишки; джерело для `/balance` і `/api/balance` |
+| `stock_balance` (VIEW) | 04 | залишки; джерело для `/balance`, `/api/balance` і `/api/stock-alerts` |
 | `overheads` | 05 | накладні витрати для звіту рентабельності |
 | `access_requests` | 06 | заявки на роль `Authorized` |
 | `user_prefs`, `user_consents`, `consent_events`, `marketing_outbox`, `analytics_events`, `privacy_audit` | 09 | Privacy Engineering (див. `PRIVACY.md`) |
@@ -340,6 +344,15 @@ erDiagram
 |---|---|---|---|
 | GET | `/api/balance` | `balance` | JSON |
 
+#### alerts — сповіщення і здоров'я сервісу (`/api`)
+
+Доступ: без сесії (публічний JSON).
+
+| Метод | Маршрут | Обробник | Відповідь |
+|---|---|---|---|
+| GET | `/api/stock-alerts` | `stock_alerts` | JSON |
+| GET | `/api/health` | `health` | JSON |
+
 #### privacy — персональні дані і згоди (`/api`)
 
 Доступ: суб'єкт даних або Admin (`may_act_on`); дії журналюються в `privacy_audit`.
@@ -367,4 +380,13 @@ erDiagram
 | БД недоступна, є кеш | 200 + `Warning: 110` | `{"status":"degraded","degraded":true,"source":"cache","cache_age_s":N,"items":[…]}` |
 | БД недоступна, кешу немає | 503 + `Retry-After: 5` | `{"status":"unavailable","degraded":true,"items":[]}` |
 
-Поведінкові контракти для QA закріплені тестами: `tests/test_resilience_contract.py` (API), `tests/test_movements_flow.py` (рух товару), `tests/test_warehouse_components.py` (контракти `Protocol`), `tests/gdpr/` (privacy).
+**JSON-контракти `/api/stock-alerts` і `/api/health`:**
+
+| Запит | HTTP | Тіло |
+|---|---|---|
+| `/api/stock-alerts` | 200 | `{"status":"ok","threshold":10.0,"count":N,"items":[{product_id, product, unit, supplier, balance_qty}]}` |
+| `/api/stock-alerts?below=-1` або `below=abc` | 400 | `{"status":"error","message":…}` |
+| `/api/health`, БД доступна | 200 | `{"status":"ok","db":"up"}` |
+| `/api/health`, пулу немає або БД недоступна | 503 | `{"status":"down","db":"unavailable"}` |
+
+Поведінкові контракти для QA закріплені тестами: `tests/test_alerts.py` (сповіщення і health), `tests/test_resilience_contract.py` (API), `tests/test_movements_flow.py` (рух товару), `tests/test_warehouse_components.py` (контракти `Protocol`), `tests/gdpr/` (privacy).
