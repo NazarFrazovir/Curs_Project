@@ -1,0 +1,327 @@
+{
+  "audit_date": "2026-11-23",
+  "documents": [
+    {
+      "path": "last – копія/README.md",
+      "title": "README застосунку",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "новачок",
+        "розробники",
+        "DevOps"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія",
+        ":(exclude)*.md",
+        ":(exclude)last – копія/tests",
+        ":(exclude)last – копія/experiments",
+        ":(exclude)last – копія/results"
+      ],
+      "consumer": "єдина точка входу для запуску; на нього посилаються лише ручні інструкції",
+      "gaps": "бізнес (призначення системи), DevOps (Docker, CI), QA (як запускати тести)",
+      "verdict": "оновити"
+    },
+    {
+      "path": "last – копія/PRIVACY.md",
+      "title": "Технічна документація Privacy Engineering (ЛР4)",
+      "kind": "product",
+      "category": "архітектурна + технічна",
+      "audiences": [
+        "розробники",
+        "QA",
+        "бізнес (DPO)"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [
+        "last – копія/privacy",
+        "last – копія/sql/09_privacy.sql"
+      ],
+      "consumer": "використовувалась на захисті ЛР4 (посилань у репозиторії немає)",
+      "gaps": "DevOps (як вмикати маскування логів у проді)",
+      "verdict": "оновити (перегляд), залишити"
+    },
+    {
+      "path": "last – копія/LR5_report.md",
+      "title": "Звіт ЛР5 (measurement governance)",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "QA",
+        "викладач"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/scripts/collect_metrics.py",
+        "last – копія/scripts/balanced_gate.py"
+      ],
+      "consumer": "історичний запис; читається лише на захисті",
+      "gaps": "—",
+      "verdict": "залишити як історичний (archive)"
+    },
+    {
+      "path": "last – копія/experiments/lab5/README.md",
+      "title": "Протокол експериментів ЛР5",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/experiments/lab5"
+      ],
+      "consumer": "історичний запис експерименту",
+      "gaps": "—",
+      "verdict": "залишити як історичний"
+    },
+    {
+      "path": "last – копія/experiments/lab6/README.md",
+      "title": "Фрагменти для live-демо pre-commit (ЛР6)",
+      "kind": "process",
+      "category": "експлуатаційна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/inventory.py"
+      ],
+      "consumer": null,
+      "gaps": "—",
+      "verdict": "deprecated (демо завершено, inventory.py змінився)"
+    },
+    {
+      "path": "last – копія/experiments/lab9/LR9_report.md",
+      "title": "Звіт ЛР9",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "бізнес",
+        "викладач"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/scripts/software_economics.py"
+      ],
+      "consumer": "захист ЛР9",
+      "gaps": "—",
+      "verdict": "залишити як історичний"
+    },
+    {
+      "path": "last – копія/FINANCIAL_LEDGER.md",
+      "title": "Згенерований фінансовий леджер (ЛР9)",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "бізнес"
+      ],
+      "owner": "scripts/software_economics.py (генерується)",
+      "covers": [
+        "last – копія/scripts/software_economics.py"
+      ],
+      "consumer": "захист ЛР9",
+      "gaps": "—",
+      "verdict": "залишити (генерований артефакт)"
+    },
+    {
+      "path": "last – копія/.env.example",
+      "title": "Шаблон змінних оточення",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps",
+        "новачок"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/docker-compose.yml",
+        "last – копія/db.py",
+        "last – копія/resilience.py",
+        "last – копія/app.py"
+      ],
+      "consumer": "копіюється в .env при кожному запуску",
+      "gaps": "немає DATABASE_URL, DB_RETRY_*, LOG_*; зламаний останній рядок",
+      "verdict": "оновити"
+    },
+    {
+      "path": "last – копія/docker-compose.yml",
+      "title": "Опис розгортання (коментарі compose)",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/Dockerfile",
+        "last – копія/toxiproxy.json",
+        "last – копія/fault.sh"
+      ],
+      "consumer": "docker compose up",
+      "gaps": "RTO/RPO, резервне копіювання",
+      "verdict": "залишити, описати в ISD"
+    },
+    {
+      "path": "last – копія/docker-compose.sonar.yml",
+      "title": "Локальний SonarQube (ЛР1)",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/scan.sh",
+        "last – копія/sonar-project.properties"
+      ],
+      "consumer": null,
+      "gaps": "—",
+      "verdict": "deprecated (замінено SonarCloud у CI)"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "title": "CI-конвеєр (коментарі в YAML)",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps",
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/requirements-quality.lock",
+        "last – копія/scripts"
+      ],
+      "consumer": "виконується GitHub Actions на кожен push/PR",
+      "gaps": "немає опису стадій поза YAML",
+      "verdict": "залишити, описати в ISD"
+    },
+    {
+      "path": "githooks/install.sh",
+      "title": "Інструкція встановлення git-хуків",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "githooks"
+      ],
+      "consumer": "запускається при онбордингу",
+      "gaps": "не згадано в README",
+      "verdict": "оновити посилання в README"
+    },
+    {
+      "path": "last – копія/sql/00_schema.sql",
+      "title": "Схема БД (коментарі SQL)",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [
+        "last – копія/sql"
+      ],
+      "consumer": "застосовується docker-entrypoint",
+      "gaps": "немає ER-моделі всіх 9 міграцій",
+      "verdict": "описати модель у SDD"
+    },
+    {
+      "path": "last – копія/sonar-project.properties",
+      "title": "Конфіг Sonar-сканера",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/Dockerfile"
+      ],
+      "consumer": null,
+      "gaps": "python 3.13 при фактичному 3.11",
+      "verdict": "оновити"
+    },
+    {
+      "path": "app.py",
+      "title": "app.py у корені репозиторію (1 рядок `import os`)",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "—",
+      "review_days": 90,
+      "covers": [],
+      "consumer": null,
+      "gaps": "вводить в оману: справжній app.py у `last – копія/`",
+      "verdict": "видалити"
+    },
+    {
+      "location": "docstrings і коментарі в *.py",
+      "title": "Коментарі в коді",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "автор модуля",
+      "consumer": "читаються при зміні коду",
+      "gaps": "немає карти системи",
+      "verdict": "залишити"
+    },
+    {
+      "location": "git log (56+ повідомлень комітів)",
+      "title": "Повідомлення комітів",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "автор коміту",
+      "consumer": "git log / blame",
+      "gaps": "—",
+      "verdict": "залишити"
+    },
+    {
+      "location": "GitHub Pull Requests #1–#4",
+      "title": "Описи PR (трекер)",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "розробники",
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "consumer": "історія рев'ю",
+      "gaps": "—",
+      "verdict": "залишити"
+    },
+    {
+      "location": "звіти ЛР6–ЛР8 і пояснення (поза репозиторієм)",
+      "title": "Звіти лабораторних 6–8",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "викладач"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "consumer": "захисти ЛР",
+      "gaps": "відсутні в репозиторії",
+      "verdict": "перенести в experiments/ або архів"
+    }
+  ]
+}
