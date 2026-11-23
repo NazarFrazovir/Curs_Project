@@ -100,6 +100,7 @@ flowchart LR
   bt --> img["image<br/>buildx → Trivy (CRITICAL,HIGH = fail)"]
   img -->|"лише push у main"| pub["push GHCR<br/>tags: sha, latest"]
   push --> hs["hotspots.yml<br/>lizard × git churn"]
+  push --> dc["docs-currency<br/>doc_audit --gate (fetch-depth 0)"]
 ```
 
 | Стадія (job) | Що робить | Quality Gate (блокує) |
@@ -110,7 +111,7 @@ flowchart LR
 | публікація | push у `ghcr.io/…/web:<sha>` і `:latest` | лише після всіх попередніх |
 | `hotspots` | матриця складність × мінливість | звіт-артефакт (не блокує) |
 | локальні git-хуки (`githooks/`) | pre-commit: lizard CC ≤ 10 + gitleaks; post-commit: `scan.sh` (deprecated) | коміт блокується |
-| аудит документації (ЛР10) | `python scripts/doc_audit.py --gate` | дрейф паспорта, прострочений перегляд |
+| `docs-currency` (ЛР10) | `python scripts/doc_audit.py --gate`, артефакт `doc-audit` | документ паспорта відстає від коду, прострочений перегляд, маршрут/таблиця/сервіс/змінна без опису |
 
 **Реліз і відкат.**
 1. Реліз: злиття PR у `main`, далі CI публікує `web:<sha>`. На хості: `docker compose pull web && docker compose up -d web`.

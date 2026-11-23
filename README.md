@@ -10,6 +10,7 @@
 | [`docs/architecture/adr/`](docs/architecture/adr/README.md) | чому прийнято ключові рішення |
 | [`docs/audiences.md`](docs/audiences.md) | які питання закриває документація для кожної аудиторії |
 | [`docs/maintenance.md`](docs/maintenance.md) | власники документів, цикли перегляду, правило «зміна коду = зміна документації» |
+| [`docs/handover.md`](docs/handover.md) | пакет передачі системи команді супроводу, Bus Factor |
 | [`docs/registry.json`](docs/registry.json) | реєстр усіх носіїв знань (аудит ЛР10) |
 
 Код застосунку лежить у теці `last – копія/` (назва історична), CI — у `.github/workflows/`, git-хуки — у `githooks/`.

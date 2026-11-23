@@ -394,22 +394,6 @@
       "passport": true
     },
     {
-      "path": "last – копія/setup_db.py",
-      "title": "setup_db.py (DDL user_prefs)",
-      "kind": "product",
-      "category": "технічна",
-      "audiences": [
-        "розробники"
-      ],
-      "owner": "—",
-      "review_days": 90,
-      "covers": [],
-      "consumer": null,
-      "gaps": "дублює DDL з sql/09_privacy.sql з іншими значеннями за замовчуванням (theme light/dark, per_page 10/20)",
-      "verdict": "видалити",
-      "status": "виконано: видалено (DDL живе в sql/09_privacy.sql)"
-    },
-    {
       "path": "docs/architecture/adr/0001-postgresql-raw-sql.md",
       "title": "ADR-0001",
       "kind": "product",
@@ -424,6 +408,22 @@
       "gaps": "—",
       "verdict": "новий (ЛР10)",
       "passport": true
+    },
+    {
+      "path": "last – копія/setup_db.py",
+      "title": "setup_db.py (DDL user_prefs)",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "—",
+      "review_days": 90,
+      "covers": [],
+      "consumer": null,
+      "gaps": "дублює DDL з sql/09_privacy.sql з іншими значеннями за замовчуванням (theme light/dark, per_page 10/20)",
+      "verdict": "видалити",
+      "status": "виконано: видалено (DDL живе в sql/09_privacy.sql)"
     },
     {
       "path": "docs/architecture/adr/0002-flask-modular-monolith.md",
@@ -470,6 +470,23 @@
       "review_days": 90,
       "covers": [],
       "consumer": "README, онбординг",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/handover.md",
+      "title": "Handover Package + Bus Factor",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "команда супроводу",
+        "новачок"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [],
+      "consumer": "README, кореневий README",
       "gaps": "—",
       "verdict": "новий (ЛР10)",
       "passport": true
