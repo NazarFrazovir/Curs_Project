@@ -76,3 +76,17 @@ def test_gate_uses_review_cycle_not_generic_age():
     assert da.gate_failures([arch], {}) == []
     arch.flags.append("прострочено перегляд (180 дн.)")
     assert da.gate_failures([arch], {}) == ["docs/sdd.md: прострочено перегляд (180 дн.)"]
+
+
+def test_app_sources_ignore_untracked_files():
+    root = da.repo_root(da.Path(__file__).parent)
+    stray = root / da.APP / "zz_untracked_cp1251.py"
+    stray.write_bytes("# коментар у cp1251\n".encode("cp1251"))
+    try:
+        sources = da.app_sources(root)
+        assert stray not in sources
+        assert root / da.APP / "app.py" in sources
+        assert not any("tests" in p.parts for p in sources)
+        da.code_routes(root)          # не падає на чужому кодуванні
+    finally:
+        stray.unlink()

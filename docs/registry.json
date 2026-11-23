@@ -18,7 +18,8 @@
         ":(exclude)*.md",
         ":(exclude)last – копія/tests",
         ":(exclude)last – копія/experiments",
-        ":(exclude)last – копія/results"
+        ":(exclude)last – копія/results",
+        ":(exclude)last – копія/scripts"
       ],
       "consumer": "єдина точка входу для запуску; на нього посилаються лише ручні інструкції",
       "gaps": "бізнес (призначення системи), DevOps (Docker, CI), QA (як запускати тести)",

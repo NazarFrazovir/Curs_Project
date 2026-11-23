@@ -143,10 +143,13 @@ def classify(m):
 # ---------- структурний дрейф паспорта ----------
 
 def app_sources(root):
+    """Лише файли під контролем git: локальні .venv, чернетки й чужі кодування не впливають на аудит."""
     base = root / APP
     skip = ("tests", "scripts", "experiments", "load")
-    return [p for p in sorted(base.rglob("*.py"))
-            if not any(part in skip for part in p.relative_to(base).parts)]
+    tracked = git(root, "ls-files", "-z", "--", f"{APP}/*.py").split("\0")
+    paths = sorted(root / name for name in tracked if name)
+    return [p for p in paths if p.exists()
+            and not any(part in skip for part in p.relative_to(base).parts)]
 
 
 def routes_in(text):
