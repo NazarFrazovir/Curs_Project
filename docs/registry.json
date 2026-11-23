@@ -22,7 +22,9 @@
       ],
       "consumer": "єдина точка входу для запуску; на нього посилаються лише ручні інструкції",
       "gaps": "бізнес (призначення системи), DevOps (Docker, CI), QA (як запускати тести)",
-      "verdict": "оновити"
+      "verdict": "оновити",
+      "status": "виконано: переписано (призначення, Docker, міграції, тести, API, онбординг)",
+      "passport": true
     },
     {
       "path": "last – копія/PRIVACY.md",
@@ -42,7 +44,9 @@
       ],
       "consumer": "використовувалась на захисті ЛР4 (посилань у репозиторії немає)",
       "gaps": "DevOps (як вмикати маскування логів у проді)",
-      "verdict": "оновити (перегляд), залишити"
+      "verdict": "оновити (перегляд), залишити",
+      "status": "виконано: переглянуто 2026-11-23, додано примітку перегляду",
+      "passport": true
     },
     {
       "path": "last – копія/LR5_report.md",
@@ -92,7 +96,8 @@
       ],
       "consumer": null,
       "gaps": "—",
-      "verdict": "deprecated (демо завершено, inventory.py змінився)"
+      "verdict": "deprecated (демо завершено, inventory.py змінився)",
+      "status": "виконано: позначено DEPRECATED у файлі"
     },
     {
       "path": "last – копія/experiments/lab9/LR9_report.md",
@@ -142,11 +147,14 @@
         "last – копія/docker-compose.yml",
         "last – копія/db.py",
         "last – копія/resilience.py",
-        "last – копія/app.py"
+        "last – копія/app.py",
+        "last – копія/privacy/logging_setup.py"
       ],
       "consumer": "копіюється в .env при кожному запуску",
       "gaps": "немає DATABASE_URL, DB_RETRY_*, LOG_*; зламаний останній рядок",
-      "verdict": "оновити"
+      "verdict": "оновити",
+      "status": "виконано: повний шаблон з усіма змінними, виправлено злиплий рядок",
+      "passport": true
     },
     {
       "path": "last – копія/docker-compose.yml",
@@ -165,7 +173,8 @@
       ],
       "consumer": "docker compose up",
       "gaps": "RTO/RPO, резервне копіювання",
-      "verdict": "залишити, описати в ISD"
+      "verdict": "залишити, описати в ISD",
+      "status": "виконано: описано в ISD §2"
     },
     {
       "path": "last – копія/docker-compose.sonar.yml",
@@ -183,7 +192,8 @@
       ],
       "consumer": null,
       "gaps": "—",
-      "verdict": "deprecated (замінено SonarCloud у CI)"
+      "verdict": "deprecated (замінено SonarCloud у CI)",
+      "status": "виконано: DEPRECATED (ADR-0004)"
     },
     {
       "path": ".github/workflows/ci.yml",
@@ -202,7 +212,8 @@
       ],
       "consumer": "виконується GitHub Actions на кожен push/PR",
       "gaps": "немає опису стадій поза YAML",
-      "verdict": "залишити, описати в ISD"
+      "verdict": "залишити, описати в ISD",
+      "status": "виконано: описано в ISD §5"
     },
     {
       "path": "githooks/install.sh",
@@ -219,7 +230,8 @@
       ],
       "consumer": "запускається при онбордингу",
       "gaps": "не згадано в README",
-      "verdict": "оновити посилання в README"
+      "verdict": "оновити посилання в README",
+      "status": "виконано: посилання в README"
     },
     {
       "path": "last – копія/sql/00_schema.sql",
@@ -236,7 +248,8 @@
       ],
       "consumer": "застосовується docker-entrypoint",
       "gaps": "немає ER-моделі всіх 9 міграцій",
-      "verdict": "описати модель у SDD"
+      "verdict": "описати модель у SDD",
+      "status": "виконано: модель даних описано в SDD §4"
     },
     {
       "path": "last – копія/sonar-project.properties",
@@ -253,7 +266,8 @@
       ],
       "consumer": null,
       "gaps": "python 3.13 при фактичному 3.11",
-      "verdict": "оновити"
+      "verdict": "оновити",
+      "status": "виконано: python 3.11; файл лишається для scan.sh (deprecated)"
     },
     {
       "path": "app.py",
@@ -268,7 +282,8 @@
       "covers": [],
       "consumer": null,
       "gaps": "вводить в оману: справжній app.py у `last – копія/`",
-      "verdict": "видалити"
+      "verdict": "видалити",
+      "status": "виконано: видалено"
     },
     {
       "location": "docstrings і коментарі в *.py",
@@ -322,6 +337,142 @@
       "consumer": "захисти ЛР",
       "gaps": "відсутні в репозиторії",
       "verdict": "перенести в experiments/ або архів"
+    },
+    {
+      "path": "docs/sdd.md",
+      "title": "System Design Document",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники",
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [
+        "last – копія/app.py",
+        "last – копія/api.py",
+        "last – копія/auth.py",
+        "last – копія/dashboard.py",
+        "last – копія/db.py",
+        "last – копія/inventory.py",
+        "last – копія/movement.py",
+        "last – копія/queries.py",
+        "last – копія/reports.py",
+        "last – копія/resilience.py",
+        "last – копія/warehouse",
+        "last – копія/privacy",
+        "last – копія/sql"
+      ],
+      "consumer": "README, ISD, ADR, maintenance посилаються; онбординг",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/isd.md",
+      "title": "Infrastructure Specification Document",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps",
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/Dockerfile",
+        "last – копія/docker-compose.yml",
+        "last – копія/docker-compose.quality.yml",
+        "last – копія/toxiproxy.json",
+        ".github/workflows",
+        "githooks"
+      ],
+      "consumer": "README, SDD посилаються; розгортання і відновлення",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "last – копія/setup_db.py",
+      "title": "setup_db.py (DDL user_prefs)",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "—",
+      "review_days": 90,
+      "covers": [],
+      "consumer": null,
+      "gaps": "дублює DDL з sql/09_privacy.sql з іншими значеннями за замовчуванням (theme light/dark, per_page 10/20)",
+      "verdict": "видалити",
+      "status": "виконано: видалено (DDL живе в sql/09_privacy.sql)"
+    },
+    {
+      "path": "docs/architecture/adr/0001-postgresql-raw-sql.md",
+      "title": "ADR-0001",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [],
+      "consumer": "індекс ADR",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/architecture/adr/0002-flask-modular-monolith.md",
+      "title": "ADR-0002",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [],
+      "consumer": "індекс ADR",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/audiences.md",
+      "title": "Матриця покриття аудиторій",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "усі"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [],
+      "consumer": "кореневий README",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/maintenance.md",
+      "title": "Регламент підтримки документації",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "розробники",
+        "DevOps"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [],
+      "consumer": "README, онбординг",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
     }
   ]
 }

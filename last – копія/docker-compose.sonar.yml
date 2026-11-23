@@ -1,3 +1,5 @@
+# DEPRECATED (ADR-0004, 2026-11-02): локальний SonarQube замінено на SonarCloud + метрики в CI.
+# Залишено для відтворення ЛР1. Не використовувати для нових вимірювань.
 services:
   sonarqube:
     image: sonarqube:community

@@ -1,5 +1,7 @@
 # Privacy Engineering (ЛР4): технічна документація
 
+> **Перегляд 2026-11-23 (ЛР10).** Після ЛР4 код `privacy/` змінювався лише рефакторингом складності `sanitizer.py` (ЛР6: класифікація ключів через таблицю правил). Поведінку маскування збережено, це підтверджують тести `tests/gdpr/` і `tests/test_classify_key.py`. Опис нижче актуальний. Місце в архітектурі — [SDD: privacy](../docs/sdd.md#privacy).
+
 Код: пакет `privacy/`, міграція `sql/09_privacy.sql`, тести `tests/gdpr/`, демо `privacy_demo.sh`.
 Підключення в `app.py`: `configure_logging()` замість `logging.basicConfig(...)` та `init_privacy(app)` у `create_app()`.
 
