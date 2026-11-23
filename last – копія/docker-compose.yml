@@ -44,10 +44,20 @@ services:
       DB_RETRY_ATTEMPTS: "3"
       DB_RETRY_BASE_DELAY: "0.1"
       DB_RETRY_MAX_DELAY: "1.0"
+      STOCK_ALERT_THRESHOLD: "10"
     ports:
       - "5050:5000"
     depends_on:
-      - toxiproxy
+      db:
+        condition: service_healthy
+      toxiproxy:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 volumes:
   pg_data:

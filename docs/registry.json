@@ -1,0 +1,496 @@
+{
+  "audit_date": "2026-11-23",
+  "documents": [
+    {
+      "path": "last – копія/README.md",
+      "title": "README застосунку",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "новачок",
+        "розробники",
+        "DevOps"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія",
+        ":(exclude)*.md",
+        ":(exclude)last – копія/tests",
+        ":(exclude)last – копія/experiments",
+        ":(exclude)last – копія/results",
+        ":(exclude)last – копія/scripts"
+      ],
+      "consumer": "єдина точка входу для запуску; на нього посилаються лише ручні інструкції",
+      "gaps": "бізнес (призначення системи), DevOps (Docker, CI), QA (як запускати тести)",
+      "verdict": "оновити",
+      "status": "виконано: переписано (призначення, Docker, міграції, тести, API, онбординг)",
+      "passport": true
+    },
+    {
+      "path": "last – копія/PRIVACY.md",
+      "title": "Технічна документація Privacy Engineering (ЛР4)",
+      "kind": "product",
+      "category": "архітектурна + технічна",
+      "audiences": [
+        "розробники",
+        "QA",
+        "бізнес (DPO)"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [
+        "last – копія/privacy",
+        "last – копія/sql/09_privacy.sql"
+      ],
+      "consumer": "використовувалась на захисті ЛР4 (посилань у репозиторії немає)",
+      "gaps": "DevOps (як вмикати маскування логів у проді)",
+      "verdict": "оновити (перегляд), залишити",
+      "status": "виконано: переглянуто 2026-11-23, додано примітку перегляду",
+      "passport": true
+    },
+    {
+      "path": "last – копія/LR5_report.md",
+      "title": "Звіт ЛР5 (measurement governance)",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "QA",
+        "викладач"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/scripts/collect_metrics.py",
+        "last – копія/scripts/balanced_gate.py"
+      ],
+      "consumer": "історичний запис; читається лише на захисті",
+      "gaps": "—",
+      "verdict": "залишити як історичний (archive)"
+    },
+    {
+      "path": "last – копія/experiments/lab5/README.md",
+      "title": "Протокол експериментів ЛР5",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/experiments/lab5"
+      ],
+      "consumer": "історичний запис експерименту",
+      "gaps": "—",
+      "verdict": "залишити як історичний"
+    },
+    {
+      "path": "last – копія/experiments/lab6/README.md",
+      "title": "Фрагменти для live-демо pre-commit (ЛР6)",
+      "kind": "process",
+      "category": "експлуатаційна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/inventory.py"
+      ],
+      "consumer": null,
+      "gaps": "—",
+      "verdict": "deprecated (демо завершено, inventory.py змінився)",
+      "status": "виконано: позначено DEPRECATED у файлі"
+    },
+    {
+      "path": "last – копія/experiments/lab9/LR9_report.md",
+      "title": "Звіт ЛР9",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "бізнес",
+        "викладач"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "covers": [
+        "last – копія/scripts/software_economics.py"
+      ],
+      "consumer": "захист ЛР9",
+      "gaps": "—",
+      "verdict": "залишити як історичний"
+    },
+    {
+      "path": "last – копія/FINANCIAL_LEDGER.md",
+      "title": "Згенерований фінансовий леджер (ЛР9)",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "бізнес"
+      ],
+      "owner": "scripts/software_economics.py (генерується)",
+      "covers": [
+        "last – копія/scripts/software_economics.py"
+      ],
+      "consumer": "захист ЛР9",
+      "gaps": "—",
+      "verdict": "залишити (генерований артефакт)"
+    },
+    {
+      "path": "last – копія/.env.example",
+      "title": "Шаблон змінних оточення",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps",
+        "новачок"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/docker-compose.yml",
+        "last – копія/db.py",
+        "last – копія/resilience.py",
+        "last – копія/app.py",
+        "last – копія/privacy/logging_setup.py"
+      ],
+      "consumer": "копіюється в .env при кожному запуску",
+      "gaps": "немає DATABASE_URL, DB_RETRY_*, LOG_*; зламаний останній рядок",
+      "verdict": "оновити",
+      "status": "виконано: повний шаблон з усіма змінними, виправлено злиплий рядок",
+      "passport": true
+    },
+    {
+      "path": "last – копія/docker-compose.yml",
+      "title": "Опис розгортання (коментарі compose)",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/Dockerfile",
+        "last – копія/toxiproxy.json",
+        "last – копія/fault.sh"
+      ],
+      "consumer": "docker compose up",
+      "gaps": "RTO/RPO, резервне копіювання",
+      "verdict": "залишити, описати в ISD",
+      "status": "виконано: описано в ISD §2"
+    },
+    {
+      "path": "last – копія/docker-compose.sonar.yml",
+      "title": "Локальний SonarQube (ЛР1)",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/scan.sh",
+        "last – копія/sonar-project.properties"
+      ],
+      "consumer": null,
+      "gaps": "—",
+      "verdict": "deprecated (замінено SonarCloud у CI)",
+      "status": "виконано: DEPRECATED (ADR-0004)"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "title": "CI-конвеєр (коментарі в YAML)",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps",
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/requirements-quality.lock",
+        "last – копія/scripts"
+      ],
+      "consumer": "виконується GitHub Actions на кожен push/PR",
+      "gaps": "немає опису стадій поза YAML",
+      "verdict": "залишити, описати в ISD",
+      "status": "виконано: описано в ISD §5"
+    },
+    {
+      "path": "githooks/install.sh",
+      "title": "Інструкція встановлення git-хуків",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "githooks"
+      ],
+      "consumer": "запускається при онбордингу",
+      "gaps": "не згадано в README",
+      "verdict": "оновити посилання в README",
+      "status": "виконано: посилання в README"
+    },
+    {
+      "path": "last – копія/sql/00_schema.sql",
+      "title": "Схема БД (коментарі SQL)",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [
+        "last – копія/sql"
+      ],
+      "consumer": "застосовується docker-entrypoint",
+      "gaps": "немає ER-моделі всіх 9 міграцій",
+      "verdict": "описати модель у SDD",
+      "status": "виконано: модель даних описано в SDD §4"
+    },
+    {
+      "path": "last – копія/sonar-project.properties",
+      "title": "Конфіг Sonar-сканера",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/Dockerfile"
+      ],
+      "consumer": null,
+      "gaps": "python 3.13 при фактичному 3.11",
+      "verdict": "оновити",
+      "status": "виконано: python 3.11; файл лишається для scan.sh (deprecated)"
+    },
+    {
+      "path": "app.py",
+      "title": "app.py у корені репозиторію (1 рядок `import os`)",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "—",
+      "review_days": 90,
+      "covers": [],
+      "consumer": null,
+      "gaps": "вводить в оману: справжній app.py у `last – копія/`",
+      "verdict": "видалити",
+      "status": "виконано: видалено"
+    },
+    {
+      "location": "docstrings і коментарі в *.py",
+      "title": "Коментарі в коді",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "автор модуля",
+      "consumer": "читаються при зміні коду",
+      "gaps": "немає карти системи",
+      "verdict": "залишити"
+    },
+    {
+      "location": "git log (56+ повідомлень комітів)",
+      "title": "Повідомлення комітів",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "автор коміту",
+      "consumer": "git log / blame",
+      "gaps": "—",
+      "verdict": "залишити"
+    },
+    {
+      "location": "GitHub Pull Requests #1–#4",
+      "title": "Описи PR (трекер)",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "розробники",
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "consumer": "історія рев'ю",
+      "gaps": "—",
+      "verdict": "залишити"
+    },
+    {
+      "location": "звіти ЛР6–ЛР8 і пояснення (поза репозиторієм)",
+      "title": "Звіти лабораторних 6–8",
+      "kind": "process",
+      "category": "технічна",
+      "audiences": [
+        "викладач"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "consumer": "захисти ЛР",
+      "gaps": "відсутні в репозиторії",
+      "verdict": "перенести в experiments/ або архів"
+    },
+    {
+      "path": "docs/sdd.md",
+      "title": "System Design Document",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники",
+        "QA"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [
+        "last – копія/app.py",
+        "last – копія/api.py",
+        "last – копія/auth.py",
+        "last – копія/dashboard.py",
+        "last – копія/db.py",
+        "last – копія/inventory.py",
+        "last – копія/movement.py",
+        "last – копія/queries.py",
+        "last – копія/reports.py",
+        "last – копія/resilience.py",
+        "last – копія/warehouse",
+        "last – копія/privacy",
+        "last – копія/sql"
+      ],
+      "consumer": "README, ISD, ADR, maintenance посилаються; онбординг",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/isd.md",
+      "title": "Infrastructure Specification Document",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "DevOps",
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [
+        "last – копія/Dockerfile",
+        "last – копія/docker-compose.yml",
+        "last – копія/docker-compose.quality.yml",
+        "last – копія/toxiproxy.json",
+        ".github/workflows",
+        "githooks"
+      ],
+      "consumer": "README, SDD посилаються; розгортання і відновлення",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/architecture/adr/0001-postgresql-raw-sql.md",
+      "title": "ADR-0001",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [],
+      "consumer": "індекс ADR",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "last – копія/setup_db.py",
+      "title": "setup_db.py (DDL user_prefs)",
+      "kind": "product",
+      "category": "технічна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "—",
+      "review_days": 90,
+      "covers": [],
+      "consumer": null,
+      "gaps": "дублює DDL з sql/09_privacy.sql з іншими значеннями за замовчуванням (theme light/dark, per_page 10/20)",
+      "verdict": "видалити",
+      "status": "виконано: видалено (DDL живе в sql/09_privacy.sql)"
+    },
+    {
+      "path": "docs/architecture/adr/0002-flask-modular-monolith.md",
+      "title": "ADR-0002",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "розробники"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [],
+      "consumer": "індекс ADR",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/audiences.md",
+      "title": "Матриця покриття аудиторій",
+      "kind": "product",
+      "category": "архітектурна",
+      "audiences": [
+        "усі"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 180,
+      "covers": [],
+      "consumer": "кореневий README",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/maintenance.md",
+      "title": "Регламент підтримки документації",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "розробники",
+        "DevOps"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [],
+      "consumer": "README, онбординг",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    },
+    {
+      "path": "docs/handover.md",
+      "title": "Handover Package + Bus Factor",
+      "kind": "product",
+      "category": "експлуатаційна",
+      "audiences": [
+        "команда супроводу",
+        "новачок"
+      ],
+      "owner": "NazarFrazovir (El)",
+      "review_days": 90,
+      "covers": [],
+      "consumer": "README, кореневий README",
+      "gaps": "—",
+      "verdict": "новий (ЛР10)",
+      "passport": true
+    }
+  ]
+}

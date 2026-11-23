@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 
+from alerts import bp as alerts_bp
 from api import bp as api_bp
 from auth import bp as auth_bp
 from dashboard import dashboard, inject_globals
@@ -14,7 +15,7 @@ from privacy import configure_logging, init_app as init_privacy
 load_dotenv()
 configure_logging()
 
-BLUEPRINTS = (auth_bp, inv_bp, reports_bp, api_bp)
+BLUEPRINTS = (auth_bp, inv_bp, reports_bp, api_bp, alerts_bp)
 
 
 def create_app():

@@ -145,6 +145,34 @@ jobs:
             last – копія/mutants/mutmut-cicd-stats.json
 
   # ---------- 2. Образи: збірка + сканування, публікація лише на push ----------
+  # ---------- 1c. ЛР10: актуальність документації («зміна коду = зміна документації») ----------
+  docs-currency:
+    name: Documentation currency (doc_audit --gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (повна історія — метрики рахуються за git log)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Documentation audit gate
+        # FAIL, якщо документ паспорта відстає від коду, прострочено перегляд
+        # або в SDD/ISD/README немає маршруту, таблиці, сервісу чи змінної з коду
+        working-directory: "last – копія"
+        run: python scripts/doc_audit.py --gate --md doc-audit.md
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: doc-audit
+          path: "last – копія/doc-audit.md"
+
   image:
     name: Image (${{ matrix.service }})
     needs: build-test             # стартує лише після успішних збірки й тестів

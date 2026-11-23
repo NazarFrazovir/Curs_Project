@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
-from db import get_conn
+from db import execute, fetchall, fetchone
+from movement import Movement
+import warehouse
 import csv
 import io
 from urllib.parse import urlencode
@@ -11,25 +13,6 @@ bp = Blueprint('inv', __name__)
 def require_role(*roles):
     role = session.get('user',{}).get('role')
     return role in roles
-
-# ---------- Helpers ----------
-def fetchall(query, params=()):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO app, public;")
-        cur.execute(query, params)
-        return cur.fetchall()
-
-def fetchone(query, params=()):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO app, public;")
-        cur.execute(query, params)
-        return cur.fetchone()
-
-def execute(query, params=()):
-    with get_conn() as conn, conn.cursor() as cur:
-        cur.execute("SET search_path TO app, public;")
-        cur.execute(query, params)
-        conn.commit()
 
 def log_archive(entity, eid, action, reason=None):
     who = (session.get('user') or {}).get('login') or 'system'
@@ -433,88 +416,32 @@ def movements_list():
 
 # ---------- Movements: спільна логіка ----------
 
-def _back(msg):
-    flash(msg, 'error')
+def _done(error, success):
+    """Flash-повідомлення за результатом сценарію і повернення до журналу рухів."""
+    flash(error or success, 'error' if error else 'ok')
     return redirect(url_for('inv.movements_list'))
 
 
-def _read_movement_form():
-    f = request.form
-    return {
-        'mtype': f.get('mtype'),
-        'movement_dt': f.get('movement_dt') or None,
-        'product_id': f.get('product_id'),
-        'qty': f.get('qty'),
-        'price': f.get('price'),
-        'supplier_id': f.get('supplier_id') or None,
-        'customer_id': f.get('customer_id') or None,
-        'agreement_id': f.get('agreement_id') or None,
-    }
+def _actor():
+    return (session.get('user') or {}).get('login')
 
-
-def _normalize_parties(m):
-    """IN — без клієнта, OUT — без постачальника. False, якщо тип невірний."""
-    if m['mtype'] == 'IN':
-        m['customer_id'] = None
-    elif m['mtype'] == 'OUT':
-        m['supplier_id'] = None
-    else:
-        return False
-    return True
-
-
-def _qty_error(qty):
-    try:
-        value = float(qty)
-    except (TypeError, ValueError):
-        return 'Невірна кількість'
-    return None if value > 0 else 'Кількість має бути додатною'
-
-
-def _available_qty(product_id, exclude_id=None):
-    row = fetchone("""
-        SELECT COALESCE(SUM(CASE WHEN mtype='IN' THEN qty ELSE -qty END), 0)
-        FROM stock_movements
-        WHERE product_id=%s AND is_canceled=false
-          AND (%s IS NULL OR id <> %s)
-    """, (product_id, exclude_id, exclude_id))
-    return row[0] if row else 0
-
-
-def _validate_movement(m, exclude_id=None):
-    """Повертає текст помилки або None, якщо рух коректний."""
-    error = _qty_error(m['qty'])
-    if error:
-        return error
-    if not _normalize_parties(m):
-        return 'Невірний тип руху'
-    if m['mtype'] != 'OUT':
-        return None
-    available = _available_qty(m['product_id'], exclude_id)
-    if available < float(m['qty']):
-        return f"Недостатньо залишку. Доступно: {available}, запитано: {m['qty']}"
-    return None
-
-
-def _insert_movement(m):
-    execute("""
-      INSERT INTO stock_movements(movement_dt, mtype, product_id, supplier_id,
-                                  customer_id, agreement_id, qty, price)
-      VALUES (COALESCE(%s::timestamptz, now()), %s, %s, %s, %s, %s, %s, %s)
-    """, (m['movement_dt'], m['mtype'], m['product_id'], m['supplier_id'],
-          m['customer_id'], m['agreement_id'], m['qty'], m['price']))
 
 @bp.post('/movements/add')
 def movements_add():
     if not require_role('Admin', 'Operator'):
-        return _back('Доступ лише для оператора/адміністратора')
-    m = _read_movement_form()
-    error = _validate_movement(m)
-    if error:
-        return _back(error)
-    _insert_movement(m)
-    flash('Рух додано', 'ok')
-    return redirect(url_for('inv.movements_list'))
+        return _done('Доступ лише для оператора/адміністратора', None)
+    error = warehouse.movement_service().add(Movement.from_form(request.form), _actor())
+    return _done(error, 'Рух додано')
+
+
+@bp.get('/movements/<int:rid>/waybill.csv')
+def movements_waybill(rid):
+    document = warehouse.waybill_document().render(rid)
+    if document is None:
+        return Response("Рух не знайдено", status=404)
+    filename, payload = document
+    return Response(payload, headers={"Content-Type": "text/csv; charset=utf-8",
+                                      "Content-Disposition": f"attachment; filename={filename}"})
 
 @bp.post('/movements/<int:rid>/cancel')
 def movements_cancel(rid):
@@ -730,26 +657,9 @@ def movements_edit(rid):
 @bp.post('/movements/<int:rid>/update')
 def movements_update(rid):
     if not require_role('Admin', 'Operator'):
-        return _back('Редагувати може лише оператор/адміністратор')
-    rows = fetchall("SELECT is_canceled FROM stock_movements WHERE id=%s", (rid,))
-    if not rows:
-        return _back('Рух не знайдено')
-    if rows[0][0]:
-        return _back('Скасований рух редагувати не можна')
-    m = _read_movement_form()
-    error = _validate_movement(m, exclude_id=rid)
-    if error:
-        return _back(error)
-    execute("""
-        UPDATE stock_movements
-           SET movement_dt = COALESCE(%s::timestamptz, movement_dt),
-               mtype=%s, product_id=%s, supplier_id=%s, customer_id=%s,
-               agreement_id=%s, qty=%s, price=%s
-         WHERE id=%s
-    """, (m['movement_dt'], m['mtype'], m['product_id'], m['supplier_id'],
-          m['customer_id'], m['agreement_id'], m['qty'], m['price'], rid))
-    flash('Зміни збережено', 'ok')
-    return redirect(url_for('inv.movements_list'))
+        return _done('Редагувати може лише оператор/адміністратор', None)
+    error = warehouse.movement_service().update(rid, Movement.from_form(request.form), _actor())
+    return _done(error, 'Зміни збережено')
 
 
 
