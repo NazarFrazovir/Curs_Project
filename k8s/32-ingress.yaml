@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  namespace: curs-project
+  labels:
+    app: web
+    app.kubernetes.io/part-of: curs-project
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: curs.local          # додати у hosts: <minikube ip> curs.local (див. README)
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http

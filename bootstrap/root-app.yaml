@@ -1,0 +1,26 @@
+# Кореневий Application (App of Apps). Це єдиний об'єкт, який застосовується вручну:
+#   kubectl apply -f bootstrap/root-app.yaml
+# Усе інше Argo CD читає з Git: він стежить за каталогом argocd-apps/ і створює
+# в ньому описані Application-и.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/NazarFrazovir/Curs_Project.git
+    targetRevision: lab5-gitops                # після злиття в main замініть на main
+    path: argocd-apps
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

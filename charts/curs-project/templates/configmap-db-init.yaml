@@ -1,0 +1,15 @@
+# SQL-схема береться з файлів чарта files/sql/*.sql (Helm не читає файли поза каталогом чарта).
+# Postgres виконує їх по черзі (за іменем) один раз, на порожньому томі.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "curs-project.dbInitName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "curs-project.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+data:
+  {{- range $path, $_ := .Files.Glob "files/sql/*.sql" }}
+  {{ base $path }}: |
+    {{- $.Files.Get $path | nindent 4 }}
+  {{- end }}

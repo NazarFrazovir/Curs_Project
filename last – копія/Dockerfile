@@ -9,9 +9,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    # setuptools і wheel потрібні лише для встановлення залежностей; у готовому образі їх немає
+    # (менше поверхні для CVE: Trivy знаходив у них вразливу вбудовану копію setuptools 70.3.0)
+    && pip uninstall -y setuptools wheel \
+    # колесо setuptools, вбудоване в базовий образ для ensurepip: Trivy сканує і його вміст
+    && rm -f /usr/local/lib/python3.11/ensurepip/_bundled/setuptools-*.whl
 
 COPY . .
+
+# Версія образу (1.0.0 / 1.1.0) видна у /healthz і в підвалі сторінок
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 
 EXPOSE 5000
 

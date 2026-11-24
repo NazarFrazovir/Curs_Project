@@ -1,0 +1,48 @@
+{{- if .Values.hooks.preUpgrade.enabled }}
+# Хук pre-upgrade: перед кожним helm upgrade перевіряє, що база відповідає.
+# Якщо БД недоступна, Job падає і оновлення не виконується (реліз лишається на попередній ревізії).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "curs-project.fullname" . | trunc 45 | trimSuffix "-" }}-pre-upgrade
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "curs-project.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hook
+  annotations:
+    "helm.sh/hook": pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      labels:
+        {{- include "curs-project.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: hook
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: check-db
+          image: "{{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}"
+          imagePullPolicy: {{ .Values.database.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "pre-upgrade: ревізія {{ .Release.Revision }}, перевіряю БД {{ include "curs-project.dbName" . }}"
+              for i in $(seq 1 20); do
+                pg_isready -h {{ include "curs-project.dbName" . }} -p {{ .Values.database.port }} && exit 0
+                sleep 3
+              done
+              echo "БД недоступна, оновлення скасовано" >&2
+              exit 1
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+{{- end }}

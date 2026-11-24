@@ -1,0 +1,502 @@
+# Копія last – копія/sql/*.sql. Postgres виконує файли з /docker-entrypoint-initdb.d по черзі (за іменем)
+# один раз, при першому старті на порожньому томі.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-init-sql
+  namespace: curs-project
+  labels:
+    app: postgres
+    app.kubernetes.io/part-of: curs-project
+data:
+  00_schema.sql: |
+    -- 00_schema.sql
+    CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION CURRENT_USER;
+    SET search_path TO app, public;
+
+    -- Users/roles (Keys table per assignment)
+    CREATE TABLE IF NOT EXISTS keys (
+      login TEXT PRIMARY KEY,
+      password TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('Admin','Operator','Authorized','Guest'))
+    );
+
+    -- Suppliers, Customers
+    CREATE TABLE IF NOT EXISTS suppliers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      address TEXT,
+      phone TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS customers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      address TEXT,
+      phone TEXT
+    );
+
+    -- Products
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      supplier_id INT NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
+      name TEXT NOT NULL,
+      unit TEXT NOT NULL,
+      purchase_price NUMERIC(14,2) NOT NULL CHECK (purchase_price >= 0),
+      sale_price NUMERIC(14,2) NOT NULL CHECK (sale_price >= 0)
+    );
+
+    -- Agreements
+    CREATE TABLE IF NOT EXISTS agreements (
+      id SERIAL PRIMARY KEY,
+      customer_id INT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+      agreement_no TEXT NOT NULL,
+      agreement_dt DATE NOT NULL
+    );
+
+    -- Stock movements
+    CREATE TABLE IF NOT EXISTS stock_movements (
+      id SERIAL PRIMARY KEY,
+      movement_dt timestamptz NOT NULL DEFAULT now(),
+      mtype TEXT NOT NULL CHECK (mtype IN ('IN','OUT')),
+      product_id INT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
+      supplier_id INT REFERENCES suppliers(id) ON DELETE RESTRICT,
+      customer_id INT REFERENCES customers(id) ON DELETE RESTRICT,
+      agreement_id INT REFERENCES agreements(id) ON DELETE RESTRICT,
+      qty NUMERIC(14,2) NOT NULL CHECK (qty >= 0),
+      price NUMERIC(14,2) NOT NULL CHECK (price >= 0),
+      sum_total NUMERIC(14,2) NOT NULL DEFAULT 0
+    );
+
+    -- Trigger to maintain sum_total
+    CREATE OR REPLACE FUNCTION set_sum_total() RETURNS trigger AS $$
+    BEGIN
+      NEW.sum_total := COALESCE(NEW.qty,0) * COALESCE(NEW.price,0);
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_set_sum_total ON stock_movements;
+    CREATE TRIGGER trg_set_sum_total
+    BEFORE INSERT OR UPDATE ON stock_movements
+    FOR EACH ROW EXECUTE FUNCTION set_sum_total();
+  01_seed.sql: |
+    -- 01_seed.sql
+    SET search_path TO app, public;
+
+    INSERT INTO keys(login,password,role) VALUES
+      ('admin','admin','Admin'),
+      ('operator','operator','Operator'),
+      ('auth','auth','Authorized'),
+      ('guest','guest','Guest')
+    ON CONFLICT (login) DO NOTHING;
+  02_soft_delete.sql: |
+    -- 02_soft_delete.sql
+    SET search_path TO app, public;
+
+    ALTER TABLE suppliers  ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+    ALTER TABLE suppliers  ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+    ALTER TABLE suppliers  ADD COLUMN IF NOT EXISTS archived_by text;
+    ALTER TABLE suppliers  ADD COLUMN IF NOT EXISTS archive_reason text;
+
+    ALTER TABLE customers  ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+    ALTER TABLE customers  ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+    ALTER TABLE customers  ADD COLUMN IF NOT EXISTS archived_by text;
+    ALTER TABLE customers  ADD COLUMN IF NOT EXISTS archive_reason text;
+
+    ALTER TABLE products   ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+    ALTER TABLE products   ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+    ALTER TABLE products   ADD COLUMN IF NOT EXISTS archived_by text;
+    ALTER TABLE products   ADD COLUMN IF NOT EXISTS archive_reason text;
+
+    ALTER TABLE agreements ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+    ALTER TABLE agreements ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+    ALTER TABLE agreements ADD COLUMN IF NOT EXISTS archived_by text;
+    ALTER TABLE agreements ADD COLUMN IF NOT EXISTS archive_reason text;
+
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                     WHERE c.relname='ux_suppliers_name_active' AND n.nspname='app') THEN
+        EXECUTE 'CREATE UNIQUE INDEX ux_suppliers_name_active ON app.suppliers (lower(name)) WHERE is_active';
+      END IF;
+    END $$;
+
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                     WHERE c.relname='ux_customers_name_active' AND n.nspname='app') THEN
+        EXECUTE 'CREATE UNIQUE INDEX ux_customers_name_active ON app.customers (lower(name)) WHERE is_active';
+      END IF;
+    END $$;
+
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+                     WHERE c.relname='ux_products_supplier_name_active' AND n.nspname='app') THEN
+        EXECUTE 'CREATE UNIQUE INDEX ux_products_supplier_name_active ON app.products (supplier_id, lower(name)) WHERE is_active';
+      END IF;
+    END $$;
+
+    CREATE TABLE IF NOT EXISTS archive_history (
+      id           SERIAL PRIMARY KEY,
+      entity_type  TEXT NOT NULL CHECK (entity_type IN ('supplier','customer','product','agreement')),
+      entity_id    INT NOT NULL,
+      action       TEXT NOT NULL CHECK (action IN ('archive','restore')),
+      actor_login  TEXT NOT NULL REFERENCES keys(login) ON DELETE SET NULL,
+      reason       TEXT,
+      created_at   timestamptz NOT NULL DEFAULT now()
+    );
+
+    -- The trigger that prevents using archived entities is added here?
+    -- We'll add it here to ensure order independence relative to 00_schema.
+    CREATE OR REPLACE FUNCTION check_entities_active() RETURNS trigger AS $$
+    DECLARE
+      p_active boolean;
+      s_active boolean;
+      c_active boolean;
+      a_active boolean;
+    BEGIN
+      SELECT is_active INTO p_active FROM products WHERE id = NEW.product_id;
+      IF p_active IS DISTINCT FROM true THEN
+        RAISE EXCEPTION 'Product % is archived or not found', NEW.product_id;
+      END IF;
+
+      IF NEW.mtype = 'IN' THEN
+        IF NEW.supplier_id IS NULL THEN
+          RAISE EXCEPTION 'IN requires supplier_id';
+        END IF;
+        SELECT is_active INTO s_active FROM suppliers WHERE id = NEW.supplier_id;
+        IF s_active IS DISTINCT FROM true THEN
+          RAISE EXCEPTION 'Supplier % is archived or not found', NEW.supplier_id;
+        END IF;
+      ELSIF NEW.mtype = 'OUT' THEN
+        IF NEW.customer_id IS NULL THEN
+          RAISE EXCEPTION 'OUT requires customer_id';
+        END IF;
+        SELECT is_active INTO c_active FROM customers WHERE id = NEW.customer_id;
+        IF c_active IS DISTINCT FROM true THEN
+          RAISE EXCEPTION 'Customer % is archived or not found', NEW.customer_id;
+        END IF;
+        IF NEW.agreement_id IS NOT NULL THEN
+          SELECT is_active INTO a_active FROM agreements WHERE id = NEW.agreement_id;
+          IF a_active IS DISTINCT FROM true THEN
+            RAISE EXCEPTION 'Agreement % is archived or not found', NEW.agreement_id;
+          END IF;
+        END IF;
+      END IF;
+
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_check_entities_active ON stock_movements;
+    CREATE TRIGGER trg_check_entities_active
+    BEFORE INSERT OR UPDATE ON stock_movements
+    FOR EACH ROW EXECUTE FUNCTION check_entities_active();
+  03_movements_cancel.sql: |
+    -- 03_movements_cancel.sql
+    SET search_path TO app, public;
+
+    ALTER TABLE stock_movements
+      ADD COLUMN IF NOT EXISTS is_canceled boolean NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS canceled_at timestamptz,
+      ADD COLUMN IF NOT EXISTS canceled_by text,
+      ADD COLUMN IF NOT EXISTS cancel_reason text;
+
+    CREATE OR REPLACE FUNCTION forbid_update_canceled() RETURNS trigger AS $$
+    BEGIN
+      IF OLD.is_canceled = true AND (NEW.qty IS DISTINCT FROM OLD.qty OR NEW.price IS DISTINCT FROM OLD.price OR NEW.product_id IS DISTINCT FROM OLD.product_id OR NEW.supplier_id IS DISTINCT FROM OLD.supplier_id OR NEW.customer_id IS DISTINCT FROM OLD.customer_id OR NEW.agreement_id IS DISTINCT FROM OLD.agreement_id OR NEW.mtype IS DISTINCT FROM OLD.mtype) THEN
+        RAISE EXCEPTION 'Canceled movement cannot be modified';
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_forbid_update_canceled ON stock_movements;
+    CREATE TRIGGER trg_forbid_update_canceled
+    BEFORE UPDATE ON stock_movements
+    FOR EACH ROW EXECUTE FUNCTION forbid_update_canceled();
+  04_stock_balance.sql: |
+    -- 04_stock_balance.sql
+    SET search_path TO app, public;
+
+    -- В'юха: залишки по кожному товару (IN - OUT), ігноруючи скасовані рухи
+    CREATE OR REPLACE VIEW stock_balance AS
+    SELECT
+      p.id              AS product_id,
+      p.name            AS product,
+      p.unit            AS unit,
+      s.id              AS supplier_id,
+      s.name            AS supplier,
+      COALESCE(SUM(CASE WHEN m.is_canceled THEN 0
+                        WHEN m.mtype = 'IN'  THEN m.qty
+                        WHEN m.mtype = 'OUT' THEN -m.qty
+                   END), 0) AS balance_qty,
+      COALESCE(SUM(CASE WHEN m.is_canceled OR m.mtype <> 'IN'  THEN 0 ELSE m.qty END), 0) AS in_qty,
+      COALESCE(SUM(CASE WHEN m.is_canceled OR m.mtype <> 'OUT' THEN 0 ELSE m.qty END), 0) AS out_qty
+    FROM products p
+    JOIN suppliers s ON s.id = p.supplier_id
+    LEFT JOIN stock_movements m ON m.product_id = p.id
+    GROUP BY p.id, p.name, p.unit, s.id, s.name;
+
+    -- Тригер: забороняє OUT, якщо не вистачає залишку
+    CREATE OR REPLACE FUNCTION check_stock_nonnegative() RETURNS trigger AS $$
+    DECLARE
+      base numeric;
+    BEGIN
+      -- Дозволяємо все, що не впливає на залишок (IN або позначення як скасований)
+      IF COALESCE(NEW.is_canceled, false) = true OR NEW.mtype = 'IN' THEN
+        RETURN NEW;
+      END IF;
+
+      -- Базовий залишок по товару без поточного рядка (на UPDATE)
+      SELECT COALESCE(SUM(CASE WHEN m.mtype='IN' THEN m.qty ELSE -m.qty END), 0)
+        INTO base
+      FROM stock_movements m
+      WHERE m.product_id = NEW.product_id
+        AND m.is_canceled = false
+        AND (TG_OP <> 'UPDATE' OR m.id <> OLD.id);
+
+      -- Перевіряємо, що після застосування нового OUT залишок не стане від’ємним
+      IF base - COALESCE(NEW.qty,0) < 0 THEN
+        RAISE EXCEPTION 'Недостатньо залишку для товару %, доступно: %, запитано OUT: %',
+          NEW.product_id, base, NEW.qty;
+      END IF;
+
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_check_stock_nonnegative ON stock_movements;
+    CREATE TRIGGER trg_check_stock_nonnegative
+    BEFORE INSERT OR UPDATE ON stock_movements
+    FOR EACH ROW EXECUTE FUNCTION check_stock_nonnegative();
+
+    -- (опційно) корисні індекси
+    CREATE INDEX IF NOT EXISTS ix_stock_movements_product ON stock_movements(product_id) WHERE is_canceled=false;
+    CREATE INDEX IF NOT EXISTS ix_stock_movements_mtype ON stock_movements(mtype) WHERE is_canceled=false;
+  05_overheads.sql: |
+    -- 05_overheads.sql
+    SET search_path TO app, public;
+
+    CREATE TABLE IF NOT EXISTS overheads (
+      id        serial PRIMARY KEY,
+      dt        date NOT NULL,
+      category  text NOT NULL,
+      amount    numeric(12,2) NOT NULL CHECK (amount >= 0),
+      note      text
+    );
+
+    CREATE INDEX IF NOT EXISTS ix_overheads_dt ON overheads(dt);
+
+    -- приклад даних
+    INSERT INTO overheads(dt, category, amount, note) VALUES
+      (CURRENT_DATE - 14, 'Оренда', 15000, 'склад'),
+      (CURRENT_DATE - 10, 'Комунальні', 3200,  'жовтень'),
+      (CURRENT_DATE - 5,  'ЗП', 42000,         'оператори')
+    ON CONFLICT DO NOTHING;
+  06_users_admin.sql: |
+    -- 06_users_admin.sql
+    SET search_path TO app, public;
+
+    -- Додаємо id, якщо його ще немає (для зв'язку з access_requests)
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS id serial;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'keys_id_uniq'
+      ) THEN
+        ALTER TABLE keys ADD CONSTRAINT keys_id_uniq UNIQUE (id);
+      END IF;
+    END $$;
+
+    -- Унікальність login (login і так PRIMARY KEY, цей constraint зайвий,
+    -- але лишаємо ідемпотентним на випадок, якщо колись PK зміниться)
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'keys_login_uniq'
+      ) THEN
+        ALTER TABLE keys ADD CONSTRAINT keys_login_uniq UNIQUE (login);
+      END IF;
+    END $$;
+
+    -- Перевірка ролей (у 00_schema.sql вже є CHECK на role,
+    -- тож цей constraint, найімовірніше, зайвий і викличе помилку "already exists" —
+    -- тому огортаємо перевіркою)
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'keys_role_check2'
+      ) THEN
+        -- пропускаємо: обмеження на role вже задане в 00_schema.sql
+        NULL;
+      END IF;
+    END $$;
+
+    -- Заявки доступу (від Гостя до Авторизованого)
+    CREATE TABLE IF NOT EXISTS access_requests (
+      id            serial PRIMARY KEY,
+      user_id       int NOT NULL REFERENCES keys(id) ON DELETE CASCADE,
+      requested_role text NOT NULL DEFAULT 'Authorized'
+        CHECK (requested_role IN ('Authorized')),
+      message       text,
+      status        text NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending','approved','denied')),
+      requested_at  timestamptz NOT NULL DEFAULT now(),
+      processed_at  timestamptz,
+      processed_by  text,
+      admin_comment text
+    );
+
+    CREATE INDEX IF NOT EXISTS ix_access_requests_user ON access_requests(user_id);
+    CREATE INDEX IF NOT EXISTS ix_access_requests_status ON access_requests(status);
+  07_last_login.sql: |
+    SET search_path TO app, public;
+
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS last_login timestamptz;
+  09_privacy.sql: |
+    -- 09_privacy.sql — Privacy Engineering (ЛР4): профіль, згоди, аудит, анонімізація.
+    -- Скрипт ідемпотентний: його можна запускати повторно на вже робочій базі.
+    SET search_path TO app, public;
+
+    -- ---------------------------------------------------------------------------
+    -- 0. Узгодження archive_history з кодом.
+    --    У 02_soft_delete.sql колонки названі actor_login/created_at, а inventory.py
+    --    пише в performed_by/performed_at. На чистій базі це ламало архівацію.
+    -- ---------------------------------------------------------------------------
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='app' AND table_name='archive_history' AND column_name='actor_login')
+         AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='app' AND table_name='archive_history' AND column_name='performed_by') THEN
+        ALTER TABLE archive_history RENAME COLUMN actor_login TO performed_by;
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='app' AND table_name='archive_history' AND column_name='created_at')
+         AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_schema='app' AND table_name='archive_history' AND column_name='performed_at') THEN
+        ALTER TABLE archive_history RENAME COLUMN created_at TO performed_at;
+      END IF;
+    END $$;
+
+    -- ---------------------------------------------------------------------------
+    -- 1. Профіль користувача (прямі ідентифікатори та контактні дані) і статус акаунта
+    -- ---------------------------------------------------------------------------
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS full_name      TEXT;
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS email          TEXT;
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS phone          TEXT;
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS created_at     timestamptz NOT NULL DEFAULT now();
+    -- active — звичайний акаунт; anonymized — знеособлений (Art. 17); system — службовий запис
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'active';
+    ALTER TABLE keys ADD COLUMN IF NOT EXISTS anonymized_at  timestamptz;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'keys_account_status_check') THEN
+        ALTER TABLE keys ADD CONSTRAINT keys_account_status_check
+          CHECK (account_status IN ('active', 'anonymized', 'system'));
+      END IF;
+    END $$;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_keys_email ON keys (lower(email)) WHERE email IS NOT NULL;
+
+    -- Нейтральний системний запис: на нього посилаються бізнес-журнали після анонімізації
+    -- автора. Пароль — випадкове значення, яке ніхто не знає; вхід під ним неможливий.
+    INSERT INTO keys (login, password, role, account_status)
+    VALUES ('deleted-user', md5(random()::text || clock_timestamp()::text), 'Guest', 'system')
+    ON CONFLICT (login) DO NOTHING;
+    UPDATE keys SET account_status = 'system' WHERE login = 'deleted-user';
+
+    -- ---------------------------------------------------------------------------
+    -- 2. Налаштування (раніше створювались лише setup_db.py — на чистій базі вхід падав)
+    -- ---------------------------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS user_prefs (
+      user_login     TEXT PRIMARY KEY REFERENCES keys(login) ON DELETE CASCADE,
+      theme          TEXT    DEFAULT 'dark',
+      density        TEXT    DEFAULT 'normal',
+      per_page       INTEGER DEFAULT 20,
+      default_filter JSONB   DEFAULT '{}'::jsonb,
+      updated_at     timestamptz DEFAULT now(),
+      updated_by     TEXT
+    );
+    ALTER TABLE user_prefs ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+    ALTER TABLE user_prefs ADD COLUMN IF NOT EXISTS updated_by TEXT;
+
+    -- ---------------------------------------------------------------------------
+    -- 3. Згоди (Art. 7): поточний стан за кожною метою + незмінна історія
+    -- ---------------------------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS user_consents (
+      user_id        INT  NOT NULL REFERENCES keys(id),
+      purpose        TEXT NOT NULL CHECK (purpose IN ('MARKETING_EMAIL', 'OPTIONAL_ANALYTICS')),
+      is_granted     BOOLEAN NOT NULL,
+      policy_version TEXT NOT NULL,
+      granted_at     timestamptz,
+      withdrawn_at   timestamptz,
+      updated_at     timestamptz NOT NULL DEFAULT now(),
+      source         TEXT NOT NULL,
+      PRIMARY KEY (user_id, purpose)
+    );
+
+    CREATE TABLE IF NOT EXISTS consent_events (
+      id             BIGSERIAL PRIMARY KEY,
+      user_id        INT  NOT NULL REFERENCES keys(id),
+      purpose        TEXT NOT NULL,
+      action         TEXT NOT NULL CHECK (action IN ('GRANT', 'REVOKE')),
+      policy_version TEXT NOT NULL,
+      source         TEXT NOT NULL,
+      correlation_id TEXT,
+      occurred_at    timestamptz NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS ix_consent_events_user ON consent_events (user_id, occurred_at);
+
+    -- Історія згод — доказ, тому лише дописується: зміна чи видалення заборонені.
+    CREATE OR REPLACE FUNCTION forbid_consent_event_change() RETURNS trigger AS $$
+    BEGIN
+      RAISE EXCEPTION 'consent_events is append-only';
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_consent_events_append_only ON consent_events;
+    CREATE TRIGGER trg_consent_events_append_only
+    BEFORE UPDATE OR DELETE ON consent_events
+    FOR EACH ROW EXECUTE FUNCTION forbid_consent_event_change();
+
+    -- ---------------------------------------------------------------------------
+    -- 4. Залежні від згоди операції
+    -- ---------------------------------------------------------------------------
+    -- Черга маркетингових листів. Адреса отримувача тут НЕ копіюється (мінімізація):
+    -- вона береться з профілю в момент відправлення.
+    CREATE TABLE IF NOT EXISTS marketing_outbox (
+      id            BIGSERIAL PRIMARY KEY,
+      user_id       INT  NOT NULL REFERENCES keys(id),
+      campaign      TEXT NOT NULL,
+      status        TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sent', 'cancelled')),
+      cancel_reason TEXT,
+      created_at    timestamptz NOT NULL DEFAULT now(),
+      processed_at  timestamptz
+    );
+    CREATE INDEX IF NOT EXISTS ix_marketing_outbox_status ON marketing_outbox (status);
+
+    -- Необов'язкова аналітика використання інтерфейсу
+    CREATE TABLE IF NOT EXISTS analytics_events (
+      id          BIGSERIAL PRIMARY KEY,
+      user_id     INT  NOT NULL REFERENCES keys(id),
+      event_name  TEXT NOT NULL,
+      occurred_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    -- ---------------------------------------------------------------------------
+    -- 5. Аудит privacy-операцій. Містить лише технічні ідентифікатори, результат
+    --    і лічильники — жодних значень персональних даних.
+    -- ---------------------------------------------------------------------------
+    CREATE TABLE IF NOT EXISTS privacy_audit (
+      id             BIGSERIAL PRIMARY KEY,
+      event_type     TEXT NOT NULL,
+      actor_ref      TEXT NOT NULL,
+      subject_ref    TEXT NOT NULL,
+      result         TEXT NOT NULL,
+      correlation_id TEXT,
+      details        JSONB NOT NULL DEFAULT '{}'::jsonb,
+      occurred_at    timestamptz NOT NULL DEFAULT now()
+    );

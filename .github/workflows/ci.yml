@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*.*.*"]            # git-тег v1.0.0 -> образ з тегом 1.0.0 (ЛР3, Kubernetes)
   pull_request:
     branches: [main]
 
@@ -181,6 +182,7 @@ jobs:
           tags: |
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
 
       - name: Build image (локально, без публікації)
         uses: docker/build-push-action@v7
@@ -217,6 +219,7 @@ jobs:
           context: ${{ matrix.path }}
           platforms: linux/amd64,linux/arm64     # arm64 — щоб образ працював на Mac з Apple Silicon
           push: true
+          build-args: APP_VERSION=${{ steps.meta.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}

@@ -1,0 +1,24 @@
+# Середовище розробки: мінімум ресурсів, доступ через NodePort, без Ingress.
+# helm install dev ./helm/curs-project -n curs-dev --create-namespace -f helm/curs-project/values-dev.yaml
+image:
+  tag: "1.0.0"
+
+web:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+service:
+  type: NodePort
+
+ingress:
+  enabled: false
+
+database:
+  persistence:
+    size: 1Gi
