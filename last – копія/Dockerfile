@@ -14,10 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     # (менше поверхні для CVE: Trivy знаходив у них вразливу вбудовану копію setuptools 70.3.0)
     && pip uninstall -y setuptools wheel \
     # колесо setuptools, вбудоване в базовий образ для ensurepip: Trivy сканує і його вміст
-    && rm -f /usr/local/lib/python3.11/ensurepip/_bundled/setuptools-*.whl \
-    # SBOM-файл самого pip (список його вбудованих бібліотек, зокрема setuptools 70.3.0):
-    # Trivy сприймає його як встановлений пакет і дає хибну вразливість
-    && rm -f /usr/local/lib/python3.11/site-packages/pip/_vendor/bom.cdx.json
+    && rm -f /usr/local/lib/python3.11/ensurepip/_bundled/setuptools-*.whl
 
 COPY . .
 
