@@ -37,10 +37,10 @@ CI (`.github/workflows/ci.yml`) на git-тег `vX.Y.Z` публікує обр
 
 ```bash
 # перевірка, що образ тягнеться без авторизації
-docker logout ghcr.io; docker pull ghcr.io/nazarfrazovir/curs_project/web:1.1.1
+docker logout ghcr.io; docker pull ghcr.io/nazarfrazovir/curs_project/web:1.1.2
 ```
 
-Версія застосунку: `/version` (`{"version":"1.1.1","pod":"..."}`) і підвал сторінки `v1.1.1`.
+Версія застосунку: `/version` (`{"version":"1.1.2","pod":"..."}`) і підвал сторінки `v1.1.2`.
 
 ## 3. Argo CD
 
@@ -99,7 +99,7 @@ git tag v1.2.0 && git push origin v1.2.0      # CI збере й опублік�
 Після зеленого CI змініть тег в Git (це і є реліз):
 
 ```bash
-# charts/curs-project/values-minikube.yaml:  tag: "1.1.1"  ->  tag: "1.2.0"
+# charts/curs-project/values-minikube.yaml:  tag: "1.1.2"  ->  tag: "1.2.0"
 git commit -am "release: web 1.2.0" && git push
 argocd app get curs-project --refresh          # Argo CD опитує Git раз на 3 хв, refresh пришвидшує
 kubectl -n curs-gitops rollout status deploy/curs-project-web
