@@ -42,6 +42,14 @@
 {{- end }}
 
 {{/*
+Ім'я Secret із паролями: або готовий Secret (secrets.existingSecret, створений поза Git),
+або Secret, який чарт створює сам зі значень (лише для навчальних стендів).
+*/}}
+{{- define "curs-project.secretName" -}}
+{{- default (include "curs-project.fullname" .) .Values.secrets.existingSecret }}
+{{- end }}
+
+{{/*
 Назва й версія чарта для мітки helm.sh/chart.
 */}}
 {{- define "curs-project.chart" -}}

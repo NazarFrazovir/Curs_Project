@@ -25,6 +25,11 @@ def healthz():
     return jsonify(status="ok", version=APP_VERSION, pod=POD_NAME)
 
 
+def version():
+    """Версія застосунку (тег образу): за нею видно, що саме розгорнуто."""
+    return jsonify(version=APP_VERSION, pod=POD_NAME)
+
+
 def readyz():
     """Readiness: застосунок готовий приймати трафік, лише якщо відповідає БД."""
     try:
@@ -48,6 +53,7 @@ def create_app():
     app.add_url_rule("/", endpoint="dashboard", view_func=dashboard)
     app.add_url_rule("/healthz", endpoint="healthz", view_func=healthz)
     app.add_url_rule("/readyz", endpoint="readyz", view_func=readyz)
+    app.add_url_rule("/version", endpoint="version", view_func=version)
     app.context_processor(inject_globals)
     app.context_processor(lambda: {"app_version": APP_VERSION})
     app.teardown_appcontext(release_conn)

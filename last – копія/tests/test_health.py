@@ -11,3 +11,9 @@ def test_readyz_unavailable_without_db(client):
     resp = client.get("/readyz")
     assert resp.status_code == 503
     assert resp.get_json()["status"] == "unavailable"
+
+
+def test_version_endpoint(client):
+    resp = client.get("/version")
+    assert resp.status_code == 200
+    assert "version" in resp.get_json()

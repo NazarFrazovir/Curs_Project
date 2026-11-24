@@ -3,6 +3,6 @@ name: curs-project
 description: Helm-чарт застосунку Curs_Project (Flask + PostgreSQL, оптова торгівля)
 type: application
 # version — версія самого чарта (шаблонів і values); змінюється, коли змінюється упаковка.
-version: 0.1.0
+version: 0.2.0
 # appVersion — версія застосунку, який розгортає чарт (тег образу за замовчуванням).
 appVersion: "1.0.0"

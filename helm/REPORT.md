@@ -22,11 +22,11 @@ minikube image ls | grep curs_project
 
 ```bash
 # 6b: різниця без встановлення
-diff <(helm template x ./helm/curs-project -f helm/curs-project/values-dev.yaml) \
-     <(helm template x ./helm/curs-project -f helm/curs-project/values-prod.yaml) | tee outputs/6b-diff.txt
+diff <(helm template x ./charts/curs-project -f charts/curs-project/values-dev.yaml) \
+     <(helm template x ./charts/curs-project -f charts/curs-project/values-prod.yaml) | tee outputs/6b-diff.txt
 # 6c: пріоритет значень (див. helm/README.md): покажіть наочно
-helm template x ./helm/curs-project -f helm/curs-project/values-prod.yaml | grep -E "replicas:|image:"
-helm template x ./helm/curs-project -f helm/curs-project/values-prod.yaml --set web.replicaCount=7 --set image.tag=9.9.9 | grep -E "replicas:|image: .*web"
+helm template x ./charts/curs-project -f charts/curs-project/values-prod.yaml | grep -E "replicas:|image:"
+helm template x ./charts/curs-project -f charts/curs-project/values-prod.yaml --set web.replicaCount=7 --set image.tag=9.9.9 | grep -E "replicas:|image: .*web"
 ```
 
 Очікувано: перший виклик дає `replicas: 3` і тег `1.1.0`, другий `7` і `9.9.9` (`--set` вищий за `-f`, `-f` вищий за `values.yaml`).
@@ -34,14 +34,14 @@ helm template x ./helm/curs-project -f helm/curs-project/values-prod.yaml --set 
 ## П. 7. Перевірка і встановлення
 
 ```bash
-helm lint ./helm/curs-project | tee outputs/7a-lint.txt
-helm lint ./helm/curs-project -f helm/curs-project/values-prod.yaml
-helm template dev ./helm/curs-project -n curs-dev -f helm/curs-project/values-dev.yaml > outputs/7b-rendered.yaml
+helm lint ./charts/curs-project | tee outputs/7a-lint.txt
+helm lint ./charts/curs-project -f charts/curs-project/values-prod.yaml
+helm template dev ./charts/curs-project -n curs-dev -f charts/curs-project/values-dev.yaml > outputs/7b-rendered.yaml
 # порівняння з ЛР3: той самий набір видів об'єктів
 grep -hE "^kind:" k8s/*.yaml | sort | uniq -c
 grep -hE "^kind:" outputs/7b-rendered.yaml | sort | uniq -c        # плюс Job і Pod (хук і тест), без Namespace
 
-helm install dev ./helm/curs-project -n curs-dev --create-namespace -f helm/curs-project/values-dev.yaml | tee outputs/7c-install.txt
+helm install dev ./charts/curs-project -n curs-dev --create-namespace -f charts/curs-project/values-dev.yaml | tee outputs/7c-install.txt
 kubectl -n curs-dev rollout status deploy --timeout=180s
 helm list -A | tee outputs/7d-list.txt
 helm status dev -n curs-dev
@@ -58,12 +58,12 @@ kubectl -n curs-dev get secret sh.helm.release.v1.dev.v1 -o jsonpath='{.data.rel
 
 ```bash
 # 8a: зміна тега через --set (термінал 2: kubectl -n curs-dev get jobs -w  покаже хук pre-upgrade)
-helm upgrade dev ./helm/curs-project -n curs-dev -f helm/curs-project/values-dev.yaml --set image.tag=1.1.0
+helm upgrade dev ./charts/curs-project -n curs-dev -f charts/curs-project/values-dev.yaml --set image.tag=1.1.0
 kubectl -n curs-dev rollout status deploy/dev-curs-project-web
 kubectl -n curs-dev get deploy dev-curs-project-web -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 
 # 8b: файл значень іншого середовища (3 репліки, ресурси prod, Ingress)
-helm upgrade dev ./helm/curs-project -n curs-dev -f helm/curs-project/values-prod.yaml
+helm upgrade dev ./charts/curs-project -n curs-dev -f charts/curs-project/values-prod.yaml
 kubectl -n curs-dev get pods,ingress
 
 # 8c: історія ревізій
@@ -88,11 +88,11 @@ kubectl -n curs-dev get all,cm,secret,pvc,ingress,jobs | tee outputs/8e-empty.tx
 ## П. 9b. Хук і тест
 
 ```bash
-helm install dev ./helm/curs-project -n curs-dev --create-namespace -f helm/curs-project/values-dev.yaml
+helm install dev ./charts/curs-project -n curs-dev --create-namespace -f charts/curs-project/values-dev.yaml
 kubectl -n curs-dev rollout status deploy --timeout=180s
 helm test dev -n curs-dev --logs | tee outputs/9b-test.txt                 # Phase: Succeeded
 # хук: у другому терміналі  kubectl -n curs-dev get jobs -w , у першому:
-helm upgrade dev ./helm/curs-project -n curs-dev -f helm/curs-project/values-dev.yaml --set web.replicaCount=3
+helm upgrade dev ./charts/curs-project -n curs-dev -f charts/curs-project/values-dev.yaml --set web.replicaCount=3
 ```
 
 Хук-перевірка (негативний сценарій): `kubectl -n curs-dev scale deploy/dev-curs-project-postgres --replicas=0`,

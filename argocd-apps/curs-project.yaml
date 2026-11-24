@@ -1,0 +1,28 @@
+# Application застосунку. Його не застосовують руками: його бере кореневий Application
+# (bootstrap/root-app.yaml) із каталогу argocd-apps/ (патерн App of Apps).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: curs-project
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # видалення Application прибирає й його об'єкти
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/NazarFrazovir/Curs_Project.git
+    targetRevision: lab5-gitops                # після злиття в main замініть на main
+    path: charts/curs-project
+    helm:
+      valueFiles:
+        - values-minikube.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: curs-gitops
+  syncPolicy:
+    automated:
+      prune: true          # об'єкти, яких більше немає в Git, видаляються з кластера
+      selfHeal: false      # пункт 6a: спершу false (ручна зміна лишається, стан OutOfSync);
+                           # потім комітом змінити на true (Argo CD повертає значення з Git)
+    syncOptions:
+      - CreateNamespace=true

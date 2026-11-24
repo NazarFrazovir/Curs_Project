@@ -1,0 +1,29 @@
+# Значення для кластера minikube, яким керує Argo CD (ЛР5). Паролів тут немає:
+# Secret `curs-project-secrets` створюється вручну в кластері й у Git не потрапляє
+# (команда в gitops/README.md).
+image:
+  repository: ghcr.io/nazarfrazovir/curs_project/web
+  tag: "1.1.0"            # змінюється комітом у Git: так відбувається реліз (пункт 5 ЛР5)
+  pullPolicy: IfNotPresent
+
+web:
+  progressDeadlineSeconds: 60   # для демонстрації: неіснуючий тег стає Degraded за ~1 хв
+  replicaCount: 2         # для демонстрації дрейфу: kubectl scale повертає значення з Git (пункт 6a)
+
+service:
+  type: NodePort
+
+ingress:
+  enabled: false
+
+secrets:
+  existingSecret: curs-project-secrets
+
+hooks:
+  preUpgrade:
+    # Argo CD виконує хуки pre-upgrade як PreSync: на першій синхронізації бази ще немає,
+    # і Job ніколи б не завершився. Перевірку «БД готова» тут замінює readinessProbe + init-контейнер.
+    enabled: false
+
+tests:
+  enabled: false          # `helm test` у Argo CD не використовується

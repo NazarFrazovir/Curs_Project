@@ -14,6 +14,7 @@ image:
 web:
   replicaCount: 2
   containerPort: 5000
+  progressDeadlineSeconds: 600   # стандартне значення Kubernetes
   resources:
     requests:
       cpu: 100m
@@ -87,6 +88,7 @@ config:
 # Навчальні значення для dev. Не використовуйте їх поза лабораторною:
 # у реальному середовищі передавайте --set secrets.postgresPassword=... --set secrets.secretKey=...
 secrets:
+  existingSecret: ""        # ім'я готового Secret (ключі POSTGRES_PASSWORD, SECRET_KEY, DATABASE_URL); якщо задано, чарт свій Secret не створює
   postgresPassword: lab-only-db-password
   secretKey: lab-only-flask-secret-key
 
@@ -94,3 +96,7 @@ secrets:
 hooks:
   preUpgrade:
     enabled: true           # Job, що перед оновленням перевіряє доступність БД
+
+# --- Тест релізу (helm test) ---
+tests:
+  enabled: true             # Pod з helm.sh/hook: test; у GitOps (Argo CD) вимкнено

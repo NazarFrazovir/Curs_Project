@@ -1,3 +1,4 @@
+{{- if .Values.tests.enabled }}
 # Тест релізу: helm test <реліз> -n <namespace>
 # Звертається до Service застосунку зсередини кластера й перевіряє /readyz (потрібна живa БД).
 apiVersion: v1
@@ -24,3 +25,4 @@ spec:
         limits:
           cpu: 100m
           memory: 64Mi
+{{- end }}

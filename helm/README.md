@@ -1,12 +1,14 @@
 # Helm-чарт Curs_Project
 
-Лабораторна №4 «Технології DevOps». Чарт `helm/curs-project` пакує той самий застосунок, що й `k8s/` у ЛР3
+> У ЛР5 чарт перенесено з `helm/curs-project` до `charts/curs-project` (див. `gitops/README.md`).
+
+Лабораторна №4 «Технології DevOps». Чарт `charts/curs-project` пакує той самий застосунок, що й `k8s/` у ЛР3
 (Flask + PostgreSQL) і дає той самий набір об'єктів у кластері.
 
 ## Структура
 
 ```
-helm/curs-project/
+charts/curs-project/
 ├── Chart.yaml              # name, description, version, appVersion
 ├── values.yaml             # значення за замовчуванням (середовище dev)
 ├── values-dev.yaml         # dev: 2 репліки, тег 1.0.0, без Ingress
@@ -73,9 +75,9 @@ helm/curs-project/
 
 ```bash
 # dev
-helm install dev ./helm/curs-project -n curs-dev --create-namespace -f helm/curs-project/values-dev.yaml
+helm install dev ./charts/curs-project -n curs-dev --create-namespace -f charts/curs-project/values-dev.yaml
 # prod
-helm install prod ./helm/curs-project -n curs-prod --create-namespace -f helm/curs-project/values-prod.yaml
+helm install prod ./charts/curs-project -n curs-prod --create-namespace -f charts/curs-project/values-prod.yaml
 ```
 
 Перед установкою видаліть реліз ЛР3 (`kubectl delete -f k8s/`), щоб не було конфлікту імен і портів.
@@ -83,8 +85,8 @@ helm install prod ./helm/curs-project -n curs-prod --create-namespace -f helm/cu
 ## Різниця між середовищами без встановлення
 
 ```bash
-diff <(helm template x ./helm/curs-project -f helm/curs-project/values-dev.yaml) \
-     <(helm template x ./helm/curs-project -f helm/curs-project/values-prod.yaml)
+diff <(helm template x ./charts/curs-project -f charts/curs-project/values-dev.yaml) \
+     <(helm template x ./charts/curs-project -f charts/curs-project/values-prod.yaml)
 ```
 
 ## Пріоритет значень

@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/component: web
 spec:
   replicas: {{ .Values.web.replicaCount }}
+  progressDeadlineSeconds: {{ .Values.web.progressDeadlineSeconds }}   # через цей час застряглий rollout стає Degraded
   revisionHistoryLimit: 5
   strategy:
     type: RollingUpdate
@@ -51,7 +52,7 @@ spec:
             - configMapRef:
                 name: {{ include "curs-project.fullname" . }}      # DB_*, LOG_*, POSTGRES_*
             - secretRef:
-                name: {{ include "curs-project.fullname" . }}      # SECRET_KEY, DATABASE_URL, POSTGRES_PASSWORD
+                name: {{ include "curs-project.secretName" . }}      # SECRET_KEY, DATABASE_URL, POSTGRES_PASSWORD
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
           readinessProbe:
