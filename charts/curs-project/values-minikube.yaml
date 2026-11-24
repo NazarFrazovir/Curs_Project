@@ -3,7 +3,7 @@
 # (команда в gitops/README.md).
 image:
   repository: ghcr.io/nazarfrazovir/curs_project/web
-  tag: "1.1.0"            # змінюється комітом у Git: так відбувається реліз (пункт 5 ЛР5)
+  tag: "1.1.1"            # змінюється комітом у Git: так відбувається реліз (пункт 5 ЛР5)
   pullPolicy: IfNotPresent
 
 web:
