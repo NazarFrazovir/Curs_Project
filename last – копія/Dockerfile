@@ -9,7 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    # setuptools і wheel потрібні лише для встановлення залежностей; у готовому образі їх немає
+    # (менше поверхні для CVE: Trivy знаходив у них вразливу вбудовану копію setuptools 70.3.0)
+    && pip uninstall -y setuptools wheel
 
 COPY . .
 
