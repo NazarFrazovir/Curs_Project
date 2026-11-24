@@ -40,7 +40,7 @@ CI (`.github/workflows/ci.yml`) на git-тег `vX.Y.Z` публікує обр
 docker logout ghcr.io; docker pull ghcr.io/nazarfrazovir/curs_project/web:1.1.1
 ```
 
-Версія застосунку: `/version` (`{"version":"1.1.1","pod":"..."}`) і підвал сторінки `v1.1.0`.
+Версія застосунку: `/version` (`{"version":"1.1.1","pod":"..."}`) і підвал сторінки `v1.1.1`.
 
 ## 3. Argo CD
 
